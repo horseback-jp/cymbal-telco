@@ -1,0 +1,11 @@
+{
+  "gcp_project_id": "ces-demo-emea",
+  "location": "eu",
+  "app_id": "22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0",
+  "agent_id": "projects/ces-demo-emea/locations/eu/apps/22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0",
+  "app_name": "[jph]cymbal-converged-commerce-demo",
+  "app_dir": "cxas_app/cymbal_converged_commerce_demo",
+  "model": "gemini-composite-v1",
+  "modality": "audio",
+  "default_channel": "audio"
+}

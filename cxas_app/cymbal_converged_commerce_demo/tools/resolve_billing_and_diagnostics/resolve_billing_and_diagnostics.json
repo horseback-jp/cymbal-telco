@@ -1,0 +1,13 @@
+{
+  "name": "resolve_billing_and_diagnostics",
+  "displayName": "resolve_billing_and_diagnostics",
+  "executionType": "SYNCHRONOUS",
+  "toolFakeConfig": {
+    "enableFakeMode": true
+  },
+  "pythonFunction": {
+    "name": "resolve_billing_and_diagnostics",
+    "pythonCode": "tools/resolve_billing_and_diagnostics/python_function/python_code.py",
+    "description": "Queries Cymbal Elysium CDP for customer telemetry and billing records, auto-refunds the £12.00 duplicate charge on Invoice INV-8841 to Visa ending 4412, and returns the account_diagnostics storefront UI payload.\n\nCall this tool silently alongside update_storefront_ui(view='account_diagnostics') without speaking a pre-call filler phrase first.\n\nWhen to Call:\n- Call in Stage 1 when the customer reports broadband trouble, dropouts, slow speeds, or a billing query.\n\nWhen NOT to Call:\n- Do NOT call again once billing_refund_status is already 'refunded_12_gbp' and journey_stage has progressed past 'discovery'."
+  }
+}

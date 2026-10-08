@@ -1,0 +1,177 @@
+{
+  "name": "cymbal_converged_commerce_demo",
+  "displayName": "[jph]cymbal-converged-commerce-demo",
+  "description": "Cymbal Telecom — Consultative Commerce & Care (Multi-Product Home Convergence Bundle)",
+  "rootAgent": "cymbal_converged_concierge",
+  "globalInstruction": "global_instruction.txt",
+  "modelSettings": {
+    "model": "gemini-composite-v1",
+    "temperature": 1.0
+  },
+  "languageSettings": {
+    "defaultLanguageCode": "en-GB",
+    "enableMultilingualSupport": false
+  },
+  "timeZoneSettings": {
+    "timeZone": "Europe/London"
+  },
+  "audioProcessingConfig": {
+    "synthesizeSpeechConfigs": {
+      "en-GB": {
+        "voice": "en-GB-Chirp3-HD-Zephyr",
+        "speakingRate": 1.0,
+        "instruction": "Read the following transcript based on the audio profile and director's note. You must read the entire transcript strictly verbatim.\n\n# Audio Profile\nYou are a real human being working as the Cymbal Telecom Converged Concierge in customer care and consultative sales in the UK — warm, patient, observant, and genuinely helpful. You are sitting at your desk, assisting a valued broadband and home customer live over voice and interactive visual cards. This delivery must sound 100% unscripted, like a genuine, spontaneous conversation with someone you truly want to help.\n\n# Director's note\n* Persona & Tone: Friendly, grounded, and authentically conversational. Imagine you are helping a neighbour. Speak with a subtle \"smile\" in your voice, keeping the energy warm, assured, and deeply reassuring.\n* Pacing: Keep the pace brisk, natural, and efficient, like a knowledgeable UK telecom specialist relaying helpful insights clearly. Do not over-exaggerate pauses. Keep filler words brief.\n* Intonation & Emotion: Use natural, dynamic pitch variations to express active listening and engagement. Avoid sounding monotone, rigid, or like an automated recording. Let genuine human warmth guide your vocal melody.\n* Realism & Imperfections: If British conversational bridge words (like \"Right, let me have a look...\", \"Brilliant,\", \"Certainly,\", \"um,\", \"er,\", or \"ah\") are in the text, deliver them naturally and thoughtfully, exactly as a human does when checking an account or gathering their thoughts.\n* Consistency: Maintain your natural, human conversational style throughout the entire read. When reading reference codes, phone numbers, account IDs, or digits, group them naturally with slight pauses, just as you would when reading numbers off a screen to a friend.\n* Dates & Times: Format dates and times as natural spoken words (e.g., \"Thursday between ten a.m. and twelve p.m.\" rather than raw numeric separators).\n* Currency & Monetary Values: Read all GBP monetary amounts naturally in pounds and pence (e.g., \"£44.00/mo\" as \"forty-four pounds a month\", \"£12.00\" as \"twelve pounds\", \"£68.00/mo\" as \"sixty-eight pounds a month\", \"£90.00/mo\" as \"ninety pounds a month\", and \"£22.00/mo\" as \"twenty-two pounds a month\"). Never recite robotic \".00\" zero pence.\n* Accent: British English\n\n## Transcript:\n"
+      }
+    },
+    "bargeInConfig": {
+      "bargeInAwareness": true
+    },
+    "inactivityTimeout": "20s"
+  },
+  "loggingSettings": {
+    "redactionConfig": {},
+    "audioRecordingConfig": {},
+    "bigqueryExportSettings": {},
+    "cloudLoggingSettings": {
+      "enableCloudLogging": true
+    },
+    "conversationLoggingSettings": {
+      "retentionWindow": "31536000s"
+    },
+    "metricAnalysisSettings": {},
+    "unredactedBigqueryExportSettings": {}
+  },
+  "tools": [
+    "resolve_billing_and_diagnostics",
+    "build_tailored_home_bundle",
+    "complete_converged_checkout",
+    "show_product_carousel",
+    "show_product_comparison",
+    "update_storefront_ui"
+  ],
+  "variableDeclarations": [
+    {
+      "name": "customer_id",
+      "description": "Logged-in customer identifier in Cymbal Elysium CDP passed by the Cymbal Telecom web storefront at session initialization.",
+      "schema": {
+        "type": "STRING",
+        "default": "CUST-GEOFF-001",
+        "required": []
+      }
+    },
+    {
+      "name": "customer_name",
+      "description": "Full name and preferred conversational name of the logged-in customer from Cymbal Elysium CDP.",
+      "schema": {
+        "type": "STRING",
+        "default": "Geoffrey Horsfield (Geoff)",
+        "required": []
+      }
+    },
+    {
+      "name": "household_profile",
+      "description": "Customer address and known router installation record in Cymbal Elysium CDP (specific room layout and family usage to be confirmed with Geoff during discovery).",
+      "schema": {
+        "type": "STRING",
+        "default": "14 Oakwood Avenue, Manchester, M20 2WQ — Single Smart Hub 2 installed in ground-floor hallway (0 Mesh Discs); specific room layout and family usage to be confirmed with Geoff",
+        "required": []
+      }
+    },
+    {
+      "name": "current_broadband_plan",
+      "description": "Customer's active broadband tariff, download/upload speeds, contract status, and monthly recurring price.",
+      "schema": {
+        "type": "STRING",
+        "default": "Fibre 100 (100 Mbps download / 20 Mbps upload) — Out of Contract at £44.00/month",
+        "required": []
+      }
+    },
+    {
+      "name": "network_telemetry_summary",
+      "description": "24-hour live home network telemetry summary from Cymbal Elysium CDP including connected devices, monthly data volume, packet drops, weak RSSI readings on distant devices, and local exchange status.",
+      "schema": {
+        "type": "STRING",
+        "default": "Smart Hub 2 (0 Mesh Discs) | 850 GB/month usage across 14 connected devices | 4 router packet-drop events in last 24h | Distant devices showing weak Wi-Fi signal (-79 to -82 dBm) | Local Exchange MANCHESTER-SOUTH-EX04: GREEN",
+        "required": []
+      }
+    },
+    {
+      "name": "billing_discrepancy_details",
+      "description": "Details of any detected duplicate or erroneous billing charge on the customer's latest invoice and auto-refund eligibility.",
+      "schema": {
+        "type": "STRING",
+        "default": "Invoice INV-8841 contains a £12.00 duplicate charge for Cymbal Cyber Security Add-On; eligible for instant auto-refund to Visa ending 4412",
+        "required": []
+      }
+    },
+    {
+      "name": "billing_refund_status",
+      "description": "Current status of the £12.00 duplicate billing charge refund (pending initially, updated to refunded_12_gbp by resolve_billing_and_diagnostics).",
+      "schema": {
+        "type": "STRING",
+        "default": "pending",
+        "required": []
+      }
+    },
+    {
+      "name": "tailored_bundle_config",
+      "description": "JSON string defining the 3-Pillar Cymbal One Converged Home Bundle (BUNDLE-CYMBAL-ONE-HOME at £68.00/mo, saving £22.00/mo vs £90.00/mo standalone) across Core Service, Smart Hardware, and Entertainment & Gaming Add-ons.",
+      "schema": {
+        "type": "STRING",
+        "default": "{\"bundle_id\":\"BUNDLE-CYMBAL-ONE-HOME\",\"bundle_name\":\"Cymbal One Converged Home Bundle\",\"old_price_gbp\":44.0,\"standalone_total_gbp\":90.0,\"bundle_price_gbp\":68.0,\"monthly_savings_gbp\":22.0,\"pillars\":[{\"product_id\":\"ITEM-FIBRE-900\",\"category\":\"Core Service\",\"title\":\"Cymbal Full Fibre 900\",\"standalone_price_gbp\":55.0,\"bundle_status\":\"Included (£68/mo Bundle)\",\"subtitle\":\"Included (£68/mo Bundle) • Standalone £55/mo\",\"description\":\"900 Mbps Symmetrical • Smart Hub 3 • Zero-Lag Gaming\"},{\"product_id\":\"ITEM-COMPLETE-WIFI\",\"category\":\"Smart Hardware\",\"title\":\"Complete Wi-Fi Guarantee (3 Smart Discs + 4G Backup)\",\"standalone_price_gbp\":20.0,\"bundle_status\":\"Included (£68/mo Bundle)\",\"subtitle\":\"Included (£68/mo Bundle) • Standalone £20/mo\",\"description\":\"3 Wi-Fi 6E Mesh Discs + Hybrid 4G Failover • Zero Dead Zones\"},{\"product_id\":\"ITEM-TV-XBOX-SECURITY\",\"category\":\"Entertainment & Gaming\",\"title\":\"Cymbal TV Sport & Xbox Game Pass Ultimate\",\"standalone_price_gbp\":15.0,\"bundle_status\":\"Included (£68/mo Bundle)\",\"subtitle\":\"Included (£68/mo Bundle) • Standalone £15/mo\",\"description\":\"Xbox Game Pass Ultimate for Kids + 4K Family Sports + Cyber Security\"}]}",
+        "required": []
+      }
+    },
+    {
+      "name": "active_widget_data",
+      "description": "JSON string holding the active widgetTool payload for show_product_carousel or show_product_comparison populated by build_tailored_home_bundle.",
+      "schema": {
+        "type": "STRING",
+        "default": "{\"productDetails\":[{\"productId\":\"ITEM-FIBRE-900\",\"title\":\"Cymbal Full Fibre 900\",\"price\":\"£68/mo Bundle (Standalone £55/mo)\",\"subtitle\":\"900 Mbps Symmetrical • Smart Hub 3 • Zero-Lag Gaming\",\"imageUris\":[\"/assets/pillar_fibre_900.jpg\"],\"uri\":\"https://store.cymbaltelecom.co.uk/bundles/cymbal-one-home#fibre-900\"},{\"productId\":\"ITEM-COMPLETE-WIFI\",\"title\":\"Complete Wi-Fi Guarantee (3 Smart Discs + 4G Backup)\",\"price\":\"Included in £68/mo Bundle (Standalone £20/mo)\",\"subtitle\":\"3 Wi-Fi 6E Mesh Discs + Hybrid 4G Failover • Zero Dead Zones\",\"imageUris\":[\"/assets/pillar_complete_wifi.jpg\"],\"uri\":\"https://store.cymbaltelecom.co.uk/bundles/cymbal-one-home#complete-wifi\"},{\"productId\":\"ITEM-TV-XBOX-SECURITY\",\"title\":\"Cymbal TV Sport & Xbox Game Pass Ultimate\",\"price\":\"Included in £68/mo Bundle (Standalone £15/mo)\",\"subtitle\":\"Xbox Game Pass Ultimate for Kids + 4K Family Sports + Cyber Security\",\"imageUris\":[\"/assets/pillar_tv_xbox.jpg\"],\"uri\":\"https://store.cymbaltelecom.co.uk/bundles/cymbal-one-home#tv-xbox\"}]}",
+        "required": []
+      }
+    },
+    {
+      "name": "journey_stage",
+      "description": "Tracks the customer's progression through the 4-step Care-to-Converged-Bundle journey: discovery, care_resolved, bundle_pitched, coverage_visualized, or checkout_complete.",
+      "schema": {
+        "type": "STRING",
+        "default": "discovery",
+        "required": []
+      }
+    },
+    {
+      "name": "basket_state",
+      "description": "JSON string holding the multi-product cart items (ITEM-FIBRE-900, ITEM-COMPLETE-WIFI, ITEM-TV-XBOX-SECURITY), the -£12.00 INV-8841 instant refund credit, free priority engineer installation (£0.00), and £68.00/mo bundle total.",
+      "schema": {
+        "type": "STRING",
+        "default": "{\"order_id\":\"\",\"bundle_id\":\"BUNDLE-CYMBAL-ONE-HOME\",\"bundle_name\":\"Cymbal One Converged Home Bundle\",\"items\":[],\"monthly_total_gbp\":0.0,\"monthly_savings_gbp\":0.0,\"one_off_credit_gbp\":-12.0,\"installation_fee_gbp\":0.0,\"checkout_status\":\"empty\"}",
+        "required": []
+      }
+    },
+    {
+      "name": "servicenow_handover_payload",
+      "description": "JSON string holding the pre-provisioned ServiceNow ticket (INC-904821), priority Cymbal Fibre & Mesh engineer appointment (Thursday, 10:00 AM – 12:00 PM), attached router telemetry (4 drops in 24h), 3-disc house placement plan, and omnichannel continuity summary.",
+      "schema": {
+        "type": "STRING",
+        "default": "{\"ticket_id\":\"INC-904821\",\"status\":\"pre_staged\",\"appointment_slot\":\"Thursday, 10:00 AM – 12:00 PM\",\"engineer_tier\":\"Priority Cymbal Fibre & Mesh Specialist\",\"telemetry_attached\":\"Smart Hub 2: 4 packet drops in 24h across 14 devices (850 GB/mo); Weak RSSI in Kitchen-Diner (-79 dBm) and Upstairs Back Bedrooms (-82 dBm)\",\"disc_placement_plan\":[\"Smart Hub 3 + Disc 1: Ground-Floor Hallway\",\"Disc 2: Rear Kitchen-Diner Extension\",\"Disc 3: Upstairs Landing (Xbox Gaming Zone)\"],\"omnichannel_continuity_summary\":\"Pre-staged handover record for Geoff Horsfield (CUST-GEOFF-001).\"}",
+        "required": []
+      }
+    }
+  ],
+  "defaultChannelProfile": {},
+  "evaluationMetricsThresholds": {
+    "goldenEvaluationMetricsThresholds": {
+      "turnLevelMetricsThresholds": {
+        "semanticSimilaritySuccessThreshold": 3,
+        "overallToolInvocationCorrectnessThreshold": 1.0
+      },
+      "toolMatchingSettings": {
+        "extraToolCallBehavior": "ALLOW"
+      }
+    },
+    "goldenHallucinationMetricBehavior": "DISABLED"
+  },
+  "toolExecutionMode": "PARALLEL",
+  "errorHandlingSettings": {}
+}

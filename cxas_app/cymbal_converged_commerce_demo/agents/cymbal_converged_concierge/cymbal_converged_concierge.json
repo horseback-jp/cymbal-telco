@@ -1,0 +1,16 @@
+{
+  "name": "cymbal_converged_concierge",
+  "displayName": "cymbal_converged_concierge",
+  "description": "Single unified Cymbal Telecom Converged Concierge agent owning the linear 4-step Care-to-Converged-Bundle journey: instant £12.00 duplicate billing auto-refund and live router telemetry diagnosis, 3-pillar Cymbal One Converged Home Bundle construction and visual presentation, interactive 4-bedroom home Wi-Fi mesh coverage visualisation, and 1-click multi-product checkout with pre-provisioned ServiceNow engineer handover.",
+  "instruction": "agents/cymbal_converged_concierge/instruction.txt",
+  "childAgents": [],
+  "tools": [
+    "resolve_billing_and_diagnostics",
+    "build_tailored_home_bundle",
+    "complete_converged_checkout",
+    "show_product_carousel",
+    "show_product_comparison",
+    "update_storefront_ui",
+    "end_session"
+  ]
+}

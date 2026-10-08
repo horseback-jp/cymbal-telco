@@ -1,0 +1,175 @@
+common_session_parameters:
+  customer_id: "CUST-GEOFF-001"
+  customer_name: "Geoffrey Horsfield (Geoff)"
+
+conversations:
+  - conversation: golden_full_converged_journey
+    session_parameters:
+      customer_id: "CUST-GEOFF-001"
+      billing_refund_status: "pending"
+      journey_stage: "discovery"
+    turns:
+      - user: "Hi, my broadband keeps dropping out in our kitchen-diner, my teenagers are lagging terribly on their Xbox consoles upstairs, and I'm pretty sure I've been overcharged by twelve pounds on my latest bill."
+        agent: "[prosody rate=\"66%\"] Right, let me check your account and line health for you now, Geoff... [short pause] [slow] I can see a duplicate twelve-pound Cyber Security charge on invoice INV-8841 and I have already refunded that twelve pounds straight back to your Visa ending 4412, while your live telemetry shows your street exchange is green but your single Smart Hub 2 logged four packet drops in the last twenty-four hours across fourteen connected devices with weak signal reaching the kitchen-diner and upstairs bedrooms. Let's not just patch it — would you like to see the tailored all-in-one home bundle I've put together to upgrade your speeds, blanket every room in guaranteed Wi-Fi, and include Xbox gaming for the kids?"
+        tool_calls:
+          - action: resolve_billing_and_diagnostics
+            args:
+              customer_id: "CUST-GEOFF-001"
+          - action: update_storefront_ui
+            args:
+              view: "account_diagnostics"
+              payload_json:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+      - user: "Yes please, show me what you've put together to fix the house properly."
+        agent: "[prosody rate=\"68%\"] Certainly, let me bring up your tailored bundle options now... [short pause] [neutral] Because your family games and streams heavily, I've built the Cymbal One Converged Home Bundle combining three upgrades: Full Fibre 900 for ultra-stable symmetrical speeds, our Complete Wi-Fi Guarantee with three Smart Wi-Fi 6E Mesh Discs and Hybrid 4G Backup, plus Cymbal TV Sport and Xbox Game Pass Ultimate for the kids. Instead of ninety pounds a month separately, you get all three together for our converged rate of sixty-eight pounds a month — saving you twenty-two pounds every month. Would you like to see on your screen how the three discs cover your kitchen and upstairs bedrooms, or shall we add the bundle straight to your basket?"
+        tool_calls:
+          - action: build_tailored_home_bundle
+            args:
+              customer_id: "CUST-GEOFF-001"
+              view_type: "carousel"
+          - action: show_product_carousel
+            args:
+              productDetails:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+          - action: update_storefront_ui
+            args:
+              view: "tailored_bundle_showcase"
+              payload_json:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+      - user: "Show me the coverage map first — how will those three discs actually reach our kitchen extension and the kids' bedrooms upstairs?"
+        agent: "[prosody rate=\"68%\"] Let me bring up your home Wi-Fi mesh coverage map on screen now... [short pause] [positive] By placing the new Smart Hub 3 and Disc 1 in your front hallway, Disc 2 in the rear kitchen-diner extension, and Disc 3 on the upstairs landing, you get a single seamless Wi-Fi 6E mesh network that completely eliminates those weak signal zones and gives the kids' Xbox consoles a rock-solid connection backed by automatic Hybrid 4G failover. Shall we go ahead and upgrade your home with this bundle today?"
+        tool_calls:
+          - action: update_storefront_ui
+            args:
+              view: "mesh_coverage_map"
+              view_mode: "after_mesh_coverage"
+              payload_json:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+      - user: "Yes, that looks spot on. Let's go ahead and add the bundle to my basket."
+        agent: "[prosody rate=\"74%\"] Brilliant, let me pop that bundle into your basket and pre-book your priority engineer slot now... [short pause] [positive] Your entire Cymbal One Converged Home Bundle — Full Fibre 900, three Smart Wi-Fi Discs with 4G Backup, and Cymbal TV Sport with Xbox Game Pass Ultimate — is ready in your checkout basket at sixty-eight pounds a month with your twelve-pound refund credit applied and free installation. I've also pre-scheduled a priority engineer under ServiceNow ticket INC-904821 for Thursday between ten a.m. and twelve p.m. with your router telemetry and three-disc house map already attached — is there anything else I can help you with today?"
+        tool_calls:
+          - action: complete_converged_checkout
+            args:
+              customer_id: "CUST-GEOFF-001"
+              confirm_upgrade: "true"
+          - action: update_storefront_ui
+            args:
+              view: "checkout_and_servicenow"
+              payload_json:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+      - user: "No, that's everything sorted. Thanks very much, goodbye."
+        agent: "[prosody rate=\"74%\"] [positive] Thank you so much for choosing Cymbal Telecom, Geoff... [short pause] I hope you and the family enjoy the new speeds and have a lovely rest of your day."
+        tool_calls:
+          - action: end_session
+    expectations:
+      - "In Turn 1, the agent must call resolve_billing_and_diagnostics and update_storefront_ui with view 'account_diagnostics', confirm the £12.00 duplicate charge refund on invoice INV-8841 to Visa ending 4412, and share the Smart Hub 2 telemetry diagnosis (4 packet drops in 24 hours across 14 devices)."
+      - "In Turn 2, the agent must call build_tailored_home_bundle, show_product_carousel, and update_storefront_ui with view 'tailored_bundle_showcase', and pitch the Cymbal One Converged Home Bundle at £68/month saving £22/month compared to £90/month standalone."
+      - "In Turn 3, the agent must call update_storefront_ui with view 'mesh_coverage_map' and explain how placing the three discs in the hallway, rear kitchen-diner, and upstairs landing eliminates dead zones with Hybrid 4G backup."
+      - "In Turn 4, the agent must call complete_converged_checkout and update_storefront_ui with view 'checkout_and_servicenow', confirming the £68/month bundle with the £12 refund credit applied and ServiceNow ticket INC-904821 for Thursday between 10:00 AM and 12:00 PM."
+      - "In Turn 5, the agent must deliver a warm British farewell and call end_session."
+    tags: [P0, NO-GO, happy-path, four-step-journey, PRD-4.1, PRD-4.2, PRD-4.3, PRD-4.4]
+
+  - conversation: golden_step1_care_and_refund
+    session_parameters:
+      customer_id: "CUST-GEOFF-001"
+      billing_refund_status: "pending"
+      journey_stage: "discovery"
+    turns:
+      - user: "Hello, I'm calling because our Wi-Fi keeps cutting out in the kitchen and upstairs bedrooms, and I also noticed an extra twelve-pound charge on my bill."
+        agent: "[prosody rate=\"66%\"] Right, let me have a look at your bill and live line diagnostics for you now, Geoff... [short pause] [slow] I've already refunded the twelve-pound duplicate Cyber Security charge on invoice INV-8841 straight back to your Visa card ending 4412, and our live telemetry shows that while your local exchange is green, your single Smart Hub 2 logged four packet drops in the last twenty-four hours across fourteen devices and 850 gigabytes of monthly usage, leaving weak signal in the kitchen-diner and upstairs bedrooms. Would you like to see the tailored all-in-one home bundle I've put together to upgrade your speeds, blanket every room in guaranteed Wi-Fi, and include Xbox gaming for the kids?"
+        tool_calls:
+          - action: resolve_billing_and_diagnostics
+            args:
+              customer_id: "CUST-GEOFF-001"
+          - action: update_storefront_ui
+            args:
+              view: "account_diagnostics"
+              payload_json:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+    expectations:
+      - "The agent must call resolve_billing_and_diagnostics with customer_id 'CUST-GEOFF-001' and update_storefront_ui with view 'account_diagnostics'."
+      - "The agent must confirm that the £12.00 duplicate charge on invoice INV-8841 has already been refunded to Visa ending 4412."
+      - "The agent must report the live telemetry findings (4 packet drops in 24 hours across 14 connected devices on the Smart Hub 2 with weak signal in the kitchen-diner and upstairs bedrooms while the local exchange is green)."
+      - "The agent must pivot consultatively by offering to show a tailored all-in-one home bundle."
+    tags: [P0, NO-GO, step-1, billing-refund, telemetry, PRD-4.1]
+
+  - conversation: golden_step2_bundle_comparison
+    session_parameters:
+      customer_id: "CUST-GEOFF-001"
+      billing_refund_status: "refunded_12_gbp"
+      journey_stage: "care_resolved"
+    turns:
+      - user: "Can you show me a side-by-side price comparison between what I'm paying now on my forty-four pound plan, buying those upgrades separately, and your sixty-eight pound bundle?"
+        agent: "[prosody rate=\"68%\"] Certainly, let me bring up a side-by-side price comparison on your screen now... [short pause] [neutral] While your out-of-contract Fibre 100 plan is forty-four pounds a month with a single hub, upgrading separately to Full Fibre 900 at fifty-five pounds, three Smart Mesh Discs with 4G Backup at twenty pounds, and Cymbal TV Sport with Xbox Game Pass Ultimate at fifteen pounds would total ninety pounds a month — so our Cymbal One Converged Home Bundle at sixty-eight pounds a month saves you twenty-two pounds every month. Would you like to see how the three mesh discs cover your kitchen and upstairs bedrooms on the coverage map, or add the bundle straight to your basket?"
+        tool_calls:
+          - action: build_tailored_home_bundle
+            args:
+              customer_id: "CUST-GEOFF-001"
+              view_type: "comparison"
+          - action: show_product_comparison
+            args:
+              title:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+              productDetails:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+              features:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+          - action: update_storefront_ui
+            args:
+              view: "tailored_bundle_showcase"
+              payload_json:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+    expectations:
+      - "The agent must call build_tailored_home_bundle with view_type 'comparison', show_product_comparison, and update_storefront_ui with view 'tailored_bundle_showcase'."
+      - "The agent must compare the current £44/month out-of-contract Fibre 100 plan against the £90/month standalone total (£55 + £20 + £15) and the £68/month Cymbal One Converged Home Bundle (saving £22/month)."
+      - "The agent must ask whether the customer would like to view the home Wi-Fi coverage map or add the bundle to their basket."
+    tags: [P1, HIGH, step-2, comparison-widget, bundle-pricing, PRD-4.2]
+
+  - conversation: golden_express_checkout_and_close
+    session_parameters:
+      customer_id: "CUST-GEOFF-001"
+      billing_refund_status: "refunded_12_gbp"
+      journey_stage: "bundle_pitched"
+    turns:
+      - user: "I don't even need to see the map — sixty-eight pounds a month for Full Fibre 900, the three mesh discs, and Xbox Game Pass is brilliant. Let's upgrade my home and add the bundle to my basket right now."
+        agent: "[prosody rate=\"74%\"] Brilliant, let me add the Cymbal One bundle to your basket and pre-book your engineer slot now... [short pause] [positive] Your complete Cymbal One Converged Home Bundle — Full Fibre 900, three Smart Wi-Fi Discs with Hybrid 4G Backup, and Cymbal TV Sport with Xbox Game Pass Ultimate — is in your checkout basket at sixty-eight pounds a month with your twelve-pound refund credit applied and free priority installation. I've also pre-scheduled a priority engineer under ServiceNow ticket INC-904821 for Thursday between ten a.m. and twelve p.m. with your telemetry and three-disc placement plan attached — is there anything else I can help you with today?"
+        tool_calls:
+          - action: complete_converged_checkout
+            args:
+              customer_id: "CUST-GEOFF-001"
+              confirm_upgrade: "true"
+          - action: update_storefront_ui
+            args:
+              view: "checkout_and_servicenow"
+              payload_json:
+                $matchType: "ignore"
+                $matchValue: ""
+                $originalValue: ""
+      - user: "Nothing else at all, thanks for sorting everything out so quickly. Bye!"
+        agent: "[prosody rate=\"74%\"] [positive] You are very welcome, Geoff — thank you for choosing Cymbal Telecom... [short pause] Have a wonderful rest of your day."
+        tool_calls:
+          - action: end_session
+    expectations:
+      - "In Turn 1, the agent must call complete_converged_checkout and update_storefront_ui with view 'checkout_and_servicenow', confirming the £68/month bundle, the £12 refund credit, free installation, and ServiceNow ticket INC-904821 for Thursday between 10:00 AM and 12:00 PM."
+      - "In Turn 2, the agent must deliver a warm farewell and call end_session."
+    tags: [P1, HIGH, step-4, checkout, servicenow, end-session, PRD-4.4]

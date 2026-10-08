@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cymbal Telecom — Personal Broadband, Mobile &amp; TV</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Speech Tag Scrubber, Fresh Session Reset & Carousel Image Mapper (runs before chat-messenger.js loads) -->
+  <script>
+    (function () {
+      // 1. Ensure every page load starts with a clean, empty chat panel (clear cached df-messenger utterances in sessionStorage & history.state)
+      try {
+        const keysToDelete = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const k = sessionStorage.key(i) || "";
+          if (
+            k.indexOf("df-messenger") !== -1 ||
+            k.indexOf("chat-messenger") !== -1 ||
+            k.indexOf("messages") !== -1 ||
+            k.indexOf("session") !== -1 ||
+            k.indexOf("welcome") !== -1
+          ) {
+            // Keep OAuth access token if valid so auth stays fast, delete all transcript/session state
+            if (k.indexOf("access-token") === -1) {
+              keysToDelete.push(k);
+            }
+          }
+        }
+        keysToDelete.forEach((k) => sessionStorage.removeItem(k));
+        if (window.history && window.history.state && typeof window.history.state === "object") {
+          const cleanState = Object.assign({}, window.history.state);
+          Object.keys(cleanState).forEach((k) => {
+            if (k.indexOf("df-messenger") !== -1 || k.indexOf("chat-messenger") !== -1) {
+              delete cleanState[k];
+            }
+          });
+          window.history.replaceState(cleanState, "");
+        }
+      } catch (_) {}
+
+      // 2. Matches inline speech/prosody tags emitted by the agent such as [normal], [neutral], [prosody rate="68%"], [short pause], etc.
+      const SPEECH_TAG_REGEX = /\[(?:normal|neutral|positive|slow|sigh|uhm|whispers|seriousness|short pause|medium pause|long pause|pause|prosody[^\]]*|laugh|chuckle|breath|clear throat|empathetic|warm|calm|excited)\]\s*/gi;
+      const GENERIC_BRACKET_TAG_REGEX = /^\s*\[[a-zA-Z0-9_=\s"%.-]{2,45}\]\s*/g;
+
+      function stripSpeechTags(text) {
+        if (typeof text !== "string" || text.indexOf("[") === -1) return text;
+        let cleaned = text
+          .replace(SPEECH_TAG_REGEX, "")
+          .replace(GENERIC_BRACKET_TAG_REGEX, "")
+          .replace(/\[(?:prosody|rate|pitch|volume)[^\]]*\]\s*/gi, "");
+        cleaned = cleaned.replace(/\[[a-zA-Z][a-zA-Z0-9_\s="%.-]{1,40}\]\s*/g, () => "");
+        return cleaned.replace(/  +/g, " ").replace(/^\s+/, "");
+      }
+
+      window.stripSpeechTags = stripSpeechTags;
+
+      function resolveLocalProductImage(contextText, indexHint) {
+        const t = String(contextText || "").toLowerCase();
+        if (t.indexOf("wi-fi") !== -1 || t.indexOf("wifi") !== -1 || t.indexOf("mesh") !== -1 || t.indexOf("disc") !== -1) {
+          return "/assets/pillar_complete_wifi.jpg";
+        }
+        if (t.indexOf("xbox") !== -1 || t.indexOf("sport") !== -1 || t.indexOf("tv") !== -1 || t.indexOf("game") !== -1) {
+          return "/assets/pillar_tv_xbox.jpg";
+        }
+        if (t.indexOf("fibre") !== -1 || t.indexOf("900") !== -1 || t.indexOf("100") !== -1 || t.indexOf("hub") !== -1) {
+          return "/assets/pillar_fibre_900.jpg";
+        }
+        const fallbacks = [
+          "/assets/pillar_fibre_900.jpg",
+          "/assets/pillar_complete_wifi.jpg",
+          "/assets/pillar_tv_xbox.jpg",
+        ];
+        return fallbacks[(indexHint || 0) % fallbacks.length];
+      }
+
+      window.resolveLocalProductImage = resolveLocalProductImage;
+
+      function fixProductImagesInShadow(root) {
+        if (!root || !root.querySelectorAll) return;
+        const imgs = root.querySelectorAll("img");
+        imgs.forEach((img, idx) => {
+          const src = img.getAttribute("src") || "";
+          // Skip titlebar icon or already-mapped local assets
+          if (src.indexOf("ccai-favicons") !== -1 || src.startsWith("/assets/")) return;
+          const parentCard = img.closest("[class*='card'], [class*='product'], [class*='item']") || img.parentElement?.parentElement || img.parentElement;
+          const cardText = (parentCard ? parentCard.textContent : "") || img.getAttribute("alt") || "";
+          const localSrc = resolveLocalProductImage(cardText, idx);
+          img.setAttribute("src", localSrc);
+          img.style.objectFit = "cover";
+          img.style.width = "100%";
+          img.style.height = "110px";
+          img.style.borderRadius = "10px";
+          img.onerror = function () {
+            if (this.src.indexOf("/assets/") === -1) {
+              this.src = localSrc;
+            }
+          };
+        });
+      }
+
+      function scrubNode(node) {
+        if (!node) return;
+        if (node.nodeType === Node.TEXT_NODE) {
+          const val = node.nodeValue;
+          if (val && val.indexOf("[") !== -1) {
+            const cleaned = stripSpeechTags(val);
+            if (cleaned !== val) {
+              node.nodeValue = cleaned;
+            }
+          }
+          return;
+        }
+        if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+          if (node.tagName === "STYLE" || node.tagName === "SCRIPT") return;
+          if (typeof node.text === "string" && node.text.indexOf("[") !== -1) {
+            const cleanedProp = stripSpeechTags(node.text);
+            if (cleanedProp !== node.text) {
+              try { node.text = cleanedProp; } catch (_) {}
+            }
+          }
+          if (Array.isArray(node.productDetails) && node.productDetails.length > 0) {
+            if (typeof window.switchStorefrontView === "function") {
+              try {
+                const activeStage = document.querySelector(".stage-view.active");
+                const activeId = activeStage ? activeStage.id : "";
+                if (activeId !== "view-tailored_bundle_showcase") {
+                  window.switchStorefrontView("tailored_bundle_showcase");
+                }
+              } catch (_) {}
+            }
+            node.productDetails.forEach((p, idx) => {
+              if (p && typeof p === "object") {
+                const localImg = resolveLocalProductImage((p.title || "") + " " + (p.productId || ""), idx);
+                p.imageUris = [localImg];
+              }
+            });
+          }
+          if (node.querySelectorAll) {
+            fixProductImagesInShadow(node);
+          }
+          if (node.shadowRoot) {
+            observeShadowRoot(node.shadowRoot);
+            scrubNode(node.shadowRoot);
+            fixProductImagesInShadow(node.shadowRoot);
+          }
+          let child = node.firstChild;
+          while (child) {
+            scrubNode(child);
+            child = child.nextSibling;
+          }
+        }
+      }
+
+      const observedRoots = new WeakSet();
+      function observeShadowRoot(root) {
+        if (!root || observedRoots.has(root)) return;
+        observedRoots.add(root);
+        const obs = new MutationObserver((mutations) => {
+          for (const m of mutations) {
+            if (m.type === "characterData") {
+              scrubNode(m.target);
+            } else if (m.addedNodes && m.addedNodes.length) {
+              m.addedNodes.forEach(scrubNode);
+              fixProductImagesInShadow(root);
+            }
+          }
+        });
+        obs.observe(root, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+      }
+
+      const origAttachShadow = Element.prototype.attachShadow;
+      Element.prototype.attachShadow = function (init) {
+        const shadowRoot = origAttachShadow.call(this, init);
+        try {
+          observeShadowRoot(shadowRoot);
+          scrubNode(shadowRoot);
+        } catch (_) {}
+        return shadowRoot;
+      };
+
+      window.__scrubChatMessengerTree = scrubNode;
+    })();
+  </script>
+
+  <!-- Official CX Agent Studio Web Widget SDK -->
+  <script src="https://www.gstatic.com/chat-messenger/sdk/prod/latest/chat-messenger.js" defer></script>
+  <link rel="stylesheet" href="https://www.gstatic.com/chat-messenger/sdk/prod/latest/styles/chat-messenger-default.css">
+  <link rel="stylesheet" href="https://www.gstatic.com/chat-messenger/sdk/prod/latest/styles/chat-messenger-layout.css">
+
+  <style>
+    :root {
+      --cymbal-navy: #0D1B24;
+      --cymbal-teal: #00838F;
+      --cymbal-teal-dark: #006064;
+      --cymbal-teal-soft: #E0F2F1;
+      --cymbal-coral: #FF5722;
+      --cymbal-coral-hover: #F4511E;
+      --cymbal-green: #00875A;
+      --cymbal-green-soft: #E6F4EA;
+      --cymbal-amber: #D97706;
+      --cymbal-amber-soft: #FEF3C7;
+      --cymbal-bg: #F4F6F8;
+      --cymbal-surface: #FFFFFF;
+      --cymbal-text: #111827;
+      --cymbal-muted: #6B7280;
+      --cymbal-border: #E5E7EB;
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --shadow-sm: 0 2px 8px rgba(13, 27, 36, 0.04);
+      --shadow-md: 0 12px 32px rgba(13, 27, 36, 0.07);
+      --shadow-lg: 0 20px 48px rgba(13, 27, 36, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--cymbal-bg);
+      color: var(--cymbal-text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ========================================================================
+       1. TOP UTILITY BAR & MAIN STOREFRONT HEADER (MATCHING SCREENSHOT)
+       ======================================================================== */
+    .utility-bar {
+      background: var(--cymbal-navy);
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 0 48px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .utility-left,
+    .utility-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      height: 100%;
+    }
+
+    .utility-tab {
+      color: rgba(255, 255, 255, 0.75);
+      text-decoration: none;
+      height: 100%;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 4px;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .utility-tab.active {
+      color: #FFFFFF;
+      font-weight: 700;
+      border-bottom-color: var(--cymbal-coral);
+    }
+
+    .utility-link {
+      color: rgba(255, 255, 255, 0.82);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+
+    .main-header {
+      background: var(--cymbal-surface);
+      border-bottom: 1px solid var(--cymbal-border);
+      padding: 0 48px;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 42px;
+    }
+
+    .cymbal-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .cymbal-logo-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .cymbal-logo-primary {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--cymbal-navy);
+      letter-spacing: -0.03em;
+    }
+
+    .cymbal-logo-sub {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.24em;
+      color: var(--cymbal-teal);
+      margin-top: 2px;
+      text-transform: uppercase;
+    }
+
+    .main-nav {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-item {
+      color: var(--cymbal-navy);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .nav-item:hover {
+      color: var(--cymbal-teal);
+    }
+
+    .nav-chevron {
+      font-size: 11px;
+      color: var(--cymbal-muted);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+
+    .icon-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--cymbal-navy);
+      font-size: 14px;
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 999px;
+      transition: background 0.15s ease;
+    }
+
+    .icon-action:hover {
+      background: var(--cymbal-bg);
+    }
+
+    .signed-in-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #F0F9FA;
+      border: 1px solid #B2EBF2;
+      color: var(--cymbal-teal-dark);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+
+    .signed-in-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00BFA5;
+    }
+
+    .basket-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #F8FAFC;
+      border: 1px solid var(--cymbal-border);
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .basket-btn:hover {
+      border-color: var(--cymbal-coral);
+      transform: translateY(-1px);
+    }
+
+    .basket-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: var(--cymbal-coral);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 800;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+      box-shadow: 0 2px 6px rgba(255, 87, 34, 0.35);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .basket-badge.bump {
+      transform: scale(1.35);
+    }
+
+    /* ========================================================================
+       2. MAIN CONTAINER & SPLIT-STAGE DOCKED CONCIERGE LAYOUT
+       (Reserves a dedicated right-hand rail for `<chat-messenger>` so the
+        chat panel NEVER overlaps or obscures the main storefront content.)
+       ======================================================================== */
+    .storefront-container {
+      width: calc(100vw - 464px);
+      max-width: 1220px;
+      margin: 0 auto 0 22px;
+      padding: 20px 20px 68px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: width 0.28s ease, max-width 0.28s ease, margin 0.28s ease;
+    }
+
+    body.chat-closed .storefront-container {
+      width: 100%;
+      max-width: 1340px;
+      margin: 0 auto;
+      padding: 24px 40px 68px;
+    }
+
+    .stage-view {
+      display: none;
+      animation: fadeSlideUp 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .stage-view.active {
+      display: block;
+    }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ========================================================================
+       3. VIEW 0: DEFAULT LANDING HERO & CATEGORY TILES (EXACT SCREENSHOT MATCH)
+       ======================================================================== */
+    .hero-banner {
+      position: relative;
+      height: 360px;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: #10252E;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+    }
+
+    .hero-banner-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 25%;
+    }
+
+    .hero-banner-gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        90deg,
+        rgba(12, 26, 34, 0.92) 0%,
+        rgba(12, 26, 34, 0.72) 42%,
+        rgba(12, 26, 34, 0.15) 75%,
+        rgba(12, 26, 34, 0.0) 100%
+      );
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 520px;
+      padding: 0 42px;
+      color: #FFFFFF;
+    }
+
+    .hero-eyebrow {
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.82);
+      margin-bottom: 10px;
+    }
+
+    .hero-title {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.025em;
+      margin: 0 0 14px;
+    }
+
+    .hero-subtitle {
+      font-size: 15px;
+      line-height: 1.48;
+      color: rgba(255, 255, 255, 0.88);
+      margin: 0 0 22px;
+      font-weight: 400;
+    }
+
+    .cta-coral-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--cymbal-coral);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 999px;
+      padding: 13px 24px;
+      font-size: 14.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(255, 87, 34, 0.35);
+      transition: background 0.18s ease, transform 0.18s ease;
+    }
+
+    .cta-coral-btn:hover {
+      background: var(--cymbal-coral-hover);
+      transform: translateY(-1px);
+    }
+
+    .hero-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 42px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hero-dot {
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.4);
+      width: 16px;
+    }
+
+    .hero-dot.active {
+      width: 34px;
+      background: var(--cymbal-coral);
+    }
+
+    .hero-pause {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(13, 27, 36, 0.65);
+      color: #FFFFFF;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      margin-left: 6px;
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .category-tile {
+      background: var(--cymbal-surface);
+      border: 1px solid var(--cymbal-border);
+      border-radius: var(--radius-lg);
+      padding: 20px 12px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .category-tile:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+      border-color: #B2DFDB;
+    }
+
+    .category-icon-circle {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: var(--cymbal-teal-soft);
+      color: var(--cymbal-teal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .category-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--cymbal-navy);
+    }
+
+    /* ========================================================================
+       4. VIEW 1: ACCOUNT CARE & INSTANT £12 REFUND (LIGHT-TOUCH VISUAL CARDS)
+       ======================================================================== */
+    .stage-header-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .stage-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #E0F2F1;
+      color: var(--cymbal-teal-dark);
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 5px 12px;
+      border-radius: 999px;
+    }
+
+    .stage-headline {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--cymbal-navy);
+      letter-spacing: -0.02em;
+      margin: 6px 0 0;
+    }
+
+    .care-cards-grid {
+      display: grid;
+      grid-template-columns: 0.95fr 1.15fr;
+      gap: 18px;
+    }
+
+    .visual-card {
+      background: var(--cymbal-surface);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--cymbal-border);
+      padding: 24px 26px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .refund-hero-badge {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: var(--cymbal-green-soft);
+      color: var(--cymbal-green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .big-stat-amount {
+      font-size: 38px;
+      font-weight: 800;
+      color: var(--cymbal-green);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .card-title-lg {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--cymbal-navy);
+      margin: 0 0 6px;
+    }
+
+    .card-sub-clean {
+      font-size: 14px;
+      color: var(--cymbal-muted);
+      line-height: 1.48;
+      margin: 0 0 18px;
+    }
+
+    .status-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+
+    .status-chip.green {
+      background: var(--cymbal-green-soft);
+      color: var(--cymbal-green);
+    }
+
+    .status-chip.amber {
+      background: var(--cymbal-amber-soft);
+      color: var(--cymbal-amber);
+    }
+
+    .status-chip.neutral {
+      background: #F1F5F9;
+      color: #334155;
+    }
+
+    .telemetry-visual-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .telemetry-tile {
+      background: #F8FAFC;
+      border: 1px solid var(--cymbal-border);
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .telemetry-tile-val {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--cymbal-navy);
+      margin-bottom: 3px;
+    }
+
+    .telemetry-tile-label {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--cymbal-muted);
+    }
+
+    /* ========================================================================
+       5. VIEW 2: GEOFF'S TAILORED 3-PILLAR HOME BUNDLE (IMAGE-LED SHOWCASE)
+       ======================================================================== */
+    .bundle-hero-bar {
+      background: linear-gradient(135deg, #0D1B24 0%, #004D56 100%);
+      border-radius: var(--radius-xl);
+      padding: 22px 28px;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      box-shadow: var(--shadow-md);
+      margin-bottom: 18px;
+    }
+
+    .bundle-hero-left h2 {
+      font-size: 26px;
+      font-weight: 800;
+      margin: 6px 0 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .bundle-hero-left p {
+      margin: 0;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.84);
+    }
+
+    .bundle-price-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 12px 20px;
+      border-radius: 18px;
+      flex-shrink: 0;
+    }
+
+    .price-compare-col {
+      text-align: right;
+    }
+
+    .old-price-strike {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.68);
+      text-decoration: line-through;
+      font-weight: 600;
+    }
+
+    .new-bundle-price {
+      font-size: 32px;
+      font-weight: 800;
+      color: #FFFFFF;
+      line-height: 1.05;
+    }
+
+    .new-bundle-price span {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .save-pill-coral {
+      background: var(--cymbal-coral);
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 8px 14px;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 6px 16px rgba(255, 87, 34, 0.35);
+    }
+
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .pillar-card {
+      background: var(--cymbal-surface);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--cymbal-border);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .pillar-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .pillar-img-wrap {
+      position: relative;
+      height: 165px;
+      background: #EEF2F6;
+      overflow: hidden;
+    }
+
+    .pillar-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .pillar-category-tag {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(13, 27, 36, 0.82);
+      backdrop-filter: blur(6px);
+      color: #FFFFFF;
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 5px 10px;
+      border-radius: 999px;
+    }
+
+    .pillar-included-tag {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: var(--cymbal-green);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .pillar-body {
+      padding: 18px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      flex: 1;
+    }
+
+    .pillar-title {
+      font-size: 17.5px;
+      font-weight: 800;
+      color: var(--cymbal-navy);
+      margin: 0;
+    }
+
+    .pillar-standalone-note {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--cymbal-muted);
+    }
+
+    .pillar-highlights {
+      list-style: none;
+      padding: 0;
+      margin: 4px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .pillar-highlights li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .check-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--cymbal-teal-soft);
+      color: var(--cymbal-teal);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    /* ========================================================================
+       6. VIEW 3: ILLUSTRATIVE HOME WI-FI MESH COVERAGE MAP (IMAGE-LED)
+       ======================================================================== */
+    .mesh-showcase-card {
+      background: var(--cymbal-surface);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--cymbal-border);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      display: grid;
+      grid-template-columns: 1.2fr 0.85fr;
+      min-height: 410px;
+    }
+
+    .mesh-image-stage {
+      position: relative;
+      background: #F1F5F9;
+      overflow: hidden;
+      min-height: 410px;
+    }
+
+    .mesh-image-stage img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: filter 0.35s ease, transform 0.35s ease;
+    }
+
+    .mesh-pin {
+      position: absolute;
+      background: rgba(13, 27, 36, 0.88);
+      backdrop-filter: blur(8px);
+      color: #FFFFFF;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+      border: 1.5px solid rgba(0, 229, 255, 0.65);
+      transition: all 0.25s ease;
+    }
+
+    .mesh-pin.deadzone-mode {
+      border-color: #EF4444;
+      background: rgba(127, 29, 29, 0.9);
+    }
+
+    .pin-pulse {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #00E5FF;
+      box-shadow: 0 0 0 4px rgba(0, 229, 255, 0.28);
+    }
+
+    .mesh-pin.deadzone-mode .pin-pulse {
+      background: #F87171;
+      box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.3);
+    }
+
+    .mesh-sidebar {
+      padding: 24px 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .mesh-mode-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .mesh-mode-pill {
+      border: 1px solid var(--cymbal-border);
+      background: #F8FAFC;
+      color: var(--cymbal-navy);
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .mesh-mode-pill.active {
+      background: var(--cymbal-teal);
+      color: #FFFFFF;
+      border-color: var(--cymbal-teal);
+    }
+
+    .room-coverage-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .room-coverage-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      background: #F8FAFC;
+      border: 1px solid var(--cymbal-border);
+    }
+
+    .room-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--cymbal-navy);
+    }
+
+    .room-sub {
+      font-size: 11.5px;
+      color: var(--cymbal-muted);
+      margin-top: 2px;
+    }
+
+    /* ========================================================================
+       7. VIEW 4: 1-CLICK ORDER CONFIRMATION & PRIORITY ENGINEER BOOKING
+       ======================================================================== */
+    .checkout-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+    }
+
+    .basket-item-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--cymbal-border);
+    }
+
+    .basket-item-row:last-of-type {
+      border-bottom: none;
+    }
+
+    .basket-thumb {
+      width: 60px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #F1F5F9;
+      flex-shrink: 0;
+    }
+
+    .basket-item-info {
+      flex: 1;
+    }
+
+    .basket-item-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--cymbal-navy);
+    }
+
+    .basket-item-sub {
+      font-size: 12px;
+      color: var(--cymbal-muted);
+    }
+
+    .basket-item-price {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--cymbal-green);
+      white-space: nowrap;
+    }
+
+    .basket-total-bar {
+      margin-top: 14px;
+      padding: 16px 20px;
+      border-radius: 14px;
+      background: #0D1B24;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .appointment-box {
+      background: #F0F9FA;
+      border: 1px solid #B2EBF2;
+      border-radius: 16px;
+      padding: 18px;
+      margin: 12px 0;
+    }
+
+    .appointment-slot {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--cymbal-navy);
+      margin: 4px 0 6px;
+    }
+
+    /* ========================================================================
+       8. PERSISTENT TRUST STRIP & PRESENTER QUICK-SWITCHER
+       ======================================================================== */
+    .trust-strip {
+      background: var(--cymbal-surface);
+      border: 1px solid var(--cymbal-border);
+      border-radius: var(--radius-lg);
+      padding: 18px 24px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .trust-icon {
+      color: var(--cymbal-teal);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .trust-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--cymbal-navy);
+      margin-bottom: 2px;
+    }
+
+    .trust-sub {
+      font-size: 12px;
+      color: var(--cymbal-muted);
+      line-height: 1.38;
+    }
+
+    /* Subtle bottom-left presenter stage switcher */
+    .presenter-dock {
+      position: fixed;
+      bottom: 16px;
+      left: 22px;
+      z-index: 50;
+      background: rgba(13, 27, 36, 0.92);
+      backdrop-filter: blur(10px);
+      padding: 5px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+    }
+
+    .dock-btn {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.72);
+      border: none;
+      padding: 7px 13px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .dock-btn:hover {
+      color: #FFFFFF;
+    }
+
+    .dock-btn.active {
+      background: var(--cymbal-coral);
+      color: #FFFFFF;
+    }
+
+    /* ========================================================================
+       9. CXAS `<chat-messenger>` RIGHT-HAND DOCKED CONCIERGE RAIL
+       (Positioned cleanly below the 114px header inside its dedicated 425px
+        right-hand rail so it NEVER covers header controls or storefront cards.)
+       ======================================================================== */
+    chat-messenger {
+      z-index: 999;
+      position: fixed;
+      top: 124px;
+      right: 18px;
+      bottom: 16px;
+      width: 425px;
+      height: calc(100vh - 140px);
+      max-height: none;
+      --chat-messenger-font-family: "Plus Jakarta Sans", sans-serif;
+      --chat-messenger-color--surface: #F8FAFC;
+      --chat-messenger-color--surface-container: #FFFFFF;
+      --chat-messenger-color--surface-container-high: #F1F5F9;
+      --chat-messenger-color--primary: #00838F;
+      --chat-messenger-color--primary-container: #E0F2F1;
+      --chat-messenger-color--secondary: #E2E8F0;
+      --chat-messenger-color--on-surface: #0D1B24;
+      --chat-messenger-color--on-primary: #FFFFFF;
+      --chat-messenger-shape--corner-value-large: 18px;
+      --chat-messenger-shape--corner-value-extra-large: 24px;
+    }
+
+    @media (max-width: 1180px) {
+      .storefront-container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+      }
+      .category-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .pillars-grid,
+      .care-cards-grid,
+      .mesh-showcase-card,
+      .checkout-grid {
+        grid-template-columns: 1fr;
+      }
+      .trust-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. TOP DARK UTILITY BAR -->
+  <div class="utility-bar">
+    <div class="utility-left">
+      <a class="utility-tab active" onclick="switchStorefrontView('home')">Personal</a>
+      <a class="utility-tab">Business</a>
+    </div>
+    <div class="utility-right">
+      <a class="utility-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Find a store
+      </a>
+      <a class="utility-link" onclick="switchStorefrontView('account_diagnostics')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+        Network status
+      </a>
+      <a class="utility-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Help
+      </a>
+    </div>
+  </div>
+
+  <!-- 2. MAIN WHITE NAVIGATION BAR -->
+  <header class="main-header">
+    <div class="header-left">
+      <a class="cymbal-logo" onclick="switchStorefrontView('home')">
+        <svg width="38" height="38" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="18" stroke="#00838F" stroke-width="3.5" />
+          <circle cx="20" cy="20" r="11" stroke="#00ACC1" stroke-width="3" />
+          <circle cx="20" cy="20" r="4.5" fill="#FF5722" />
+        </svg>
+        <div class="cymbal-logo-text">
+          <span class="cymbal-logo-primary">cymbal</span>
+          <span class="cymbal-logo-sub">TELECOM</span>
+        </div>
+      </a>
+
+      <nav class="main-nav">
+        <a class="nav-item">Phones <span class="nav-chevron">⌄</span></a>
+        <a class="nav-item">SIM Only <span class="nav-chevron">⌄</span></a>
+        <a class="nav-item" onclick="switchStorefrontView('tailored_bundle_showcase')">Broadband <span class="nav-chevron">⌄</span></a>
+        <a class="nav-item" onclick="switchStorefrontView('mesh_coverage_map')">Complete Wi-Fi</a>
+        <a class="nav-item" onclick="switchStorefrontView('tailored_bundle_showcase')">Deals</a>
+        <a class="nav-item" onclick="switchStorefrontView('account_diagnostics')">Help</a>
+      </nav>
+    </div>
+
+    <div class="header-right">
+      <button class="icon-action" type="button" aria-label="Search">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+
+      <div class="signed-in-pill" title="Customer ID: CUST-GEOFF-001 • 14 Oakwood Avenue, Manchester">
+        <span class="signed-in-dot"></span>
+        <span>Hi, Geoff</span>
+      </div>
+
+      <button class="basket-btn" type="button" onclick="switchStorefrontView('checkout_and_servicenow')" aria-label="Basket">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D1B24" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span class="basket-badge" id="header-basket-count">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 3. MAIN STOREFRONT STAGE -->
+  <main class="storefront-container">
+
+    <!-- ======================================================================
+         STAGE 0: DEFAULT STOREFRONT LANDING (SCREENSHOT MATCH)
+         ====================================================================== -->
+    <section class="stage-view active" id="view-home">
+      <div class="hero-banner">
+        <img class="hero-banner-img" src="/assets/hero_family_fibre.jpg" alt="Family enjoying Cymbal Full Fibre 900" />
+        <div class="hero-banner-gradient"></div>
+        <div class="hero-content">
+          <div class="hero-eyebrow">FIBRE BROADBAND</div>
+          <h1 class="hero-title">Full Fibre 900 from £42 a month</h1>
+          <p class="hero-subtitle">
+            Smart Hub 3, free installation and our whole-home Wi-Fi guarantee. £49 a month after 12 months.
+          </p>
+          <button class="cta-coral-btn" type="button" onclick="switchStorefrontView('tailored_bundle_showcase')">
+            <span>Explore Cymbal One Bundles</span>
+            <span>→</span>
+          </button>
+        </div>
+        <div class="hero-controls">
+          <span class="hero-dot"></span>
+          <span class="hero-dot active"></span>
+          <span class="hero-dot"></span>
+          <span class="hero-pause">❚❚</span>
+        </div>
+      </div>
+
+      <div class="category-grid">
+        <div class="category-tile">
+          <div class="category-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          </div>
+          <span class="category-label">Phones</span>
+        </div>
+
+        <div class="category-tile">
+          <div class="category-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="6" rx="1"/></svg>
+          </div>
+          <span class="category-label">SIM Only</span>
+        </div>
+
+        <div class="category-tile" onclick="switchStorefrontView('tailored_bundle_showcase')">
+          <div class="category-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+          </div>
+          <span class="category-label">Broadband</span>
+        </div>
+
+        <div class="category-tile" onclick="switchStorefrontView('tailored_bundle_showcase')">
+          <div class="category-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </div>
+          <span class="category-label">Deals</span>
+        </div>
+
+        <div class="category-tile" onclick="switchStorefrontView('mesh_coverage_map')">
+          <div class="category-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </div>
+          <span class="category-label">Upgrade</span>
+        </div>
+
+        <div class="category-tile" onclick="switchStorefrontView('account_diagnostics')">
+          <div class="category-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg>
+          </div>
+          <span class="category-label">Help</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         STAGE 1: INSTANT £12 REFUND & HOME CONNECTION CHECK (`account_diagnostics`)
+         ====================================================================== -->
+    <section class="stage-view" id="view-account_diagnostics">
+      <div class="stage-header-strip">
+        <div>
+          <span class="stage-pill">✓ My Cymbal Account Care • 14 Oakwood Avenue</span>
+          <h2 class="stage-headline">We’ve sorted your bill &amp; checked your home Wi-Fi</h2>
+        </div>
+      </div>
+
+      <div class="care-cards-grid">
+        <!-- Left Card: Instant Refund -->
+        <div class="visual-card">
+          <div>
+            <div class="refund-hero-badge">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="big-stat-amount" id="diag-refund-amount">£12.00 Refunded</div>
+            <h3 class="card-title-lg">Credited straight back to Visa •••• 4412</h3>
+            <p class="card-sub-clean" id="diag-refund-reason">
+              We spotted a duplicate Cyber Security add-on on your latest bill (#INV-8841) and refunded it automatically.
+            </p>
+          </div>
+          <div class="status-chip-row">
+            <span class="status-chip green">✓ Refund Complete</span>
+            <span class="status-chip neutral">Invoice #INV-8841</span>
+          </div>
+        </div>
+
+        <!-- Right Card: Home Connection Snapshot -->
+        <div class="visual-card">
+          <div>
+            <div class="status-chip-row" style="margin-bottom: 18px;">
+              <span class="status-chip green">✓ Street Exchange Green</span>
+              <span class="status-chip amber">⚠ Hub At Capacity</span>
+              <span class="status-chip neutral">Fibre 100 • Out of Contract (£44/mo)</span>
+            </div>
+            <h3 class="card-title-lg">Street fibre is healthy — your single Smart Hub 2 is overloaded</h3>
+            <p class="card-sub-clean">
+              Your hallway router is handling 14 active devices and 850 GB/mo on an out-of-contract Fibre 100 plan, causing 4 Wi-Fi signal drops on distant devices in the last 24 hours.
+            </p>
+
+            <div class="telemetry-visual-grid">
+              <div class="telemetry-tile">
+                <div class="telemetry-tile-val">14</div>
+                <div class="telemetry-tile-label">Active Devices</div>
+              </div>
+              <div class="telemetry-tile">
+                <div class="telemetry-tile-val">850 GB</div>
+                <div class="telemetry-tile-label">Monthly Usage</div>
+              </div>
+              <div class="telemetry-tile">
+                <div class="telemetry-tile-val" style="color: var(--cymbal-amber);">4 Drops</div>
+                <div class="telemetry-tile-label">Last 24 Hours</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 22px; display: flex; justify-content: flex-end;">
+            <button class="cta-coral-btn" type="button" onclick="switchStorefrontView('tailored_bundle_showcase')">
+              <span>See Geoff’s Tailored Home Bundle</span>
+              <span>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         STAGE 2: GEOFF'S TAILORED 3-PILLAR HOME BUNDLE (`tailored_bundle_showcase`)
+         ====================================================================== -->
+    <section class="stage-view" id="view-tailored_bundle_showcase">
+      <div class="bundle-hero-bar">
+        <div class="bundle-hero-left">
+          <span class="stage-pill" style="background: rgba(255,255,255,0.14); color: #80DEEA;">★ Tailored for Geoff’s Home</span>
+          <h2 id="bundle-headline-title">Cymbal One Converged Home Bundle</h2>
+          <p>Ultrafast broadband, guaranteed whole-home Wi-Fi, and family gaming &amp; sport in one simple plan.</p>
+        </div>
+
+        <div class="bundle-price-box">
+          <div class="price-compare-col">
+            <div class="old-price-strike">£90/mo separately • Was £44/mo Fibre 100</div>
+            <div class="new-bundle-price" id="bundle-price-display">£68<span>/month</span></div>
+          </div>
+          <div class="save-pill-coral" id="bundle-savings-pill">Save £22/mo</div>
+        </div>
+      </div>
+
+      <div class="pillars-grid">
+        <!-- Pillar 1: Full Fibre 900 -->
+        <article class="pillar-card">
+          <div class="pillar-img-wrap">
+            <img src="/assets/pillar_fibre_900.jpg" alt="Cymbal Full Fibre 900 Smart Hub 3" />
+            <span class="pillar-category-tag">1. Core Service</span>
+            <span class="pillar-included-tag">Included in Bundle</span>
+          </div>
+          <div class="pillar-body">
+            <h3 class="pillar-title">Cymbal Full Fibre 900</h3>
+            <div class="pillar-standalone-note">9× faster than your current Fibre 100 (£55/mo standalone)</div>
+            <ul class="pillar-highlights">
+              <li><span class="check-dot">✓</span> 900 Mbps ultra-stable speeds</li>
+              <li><span class="check-dot">✓</span> Next-gen Wi-Fi 6E Smart Hub 3</li>
+              <li><span class="check-dot">✓</span> Built for 4K streaming &amp; console gaming</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Pillar 2: Complete Wi-Fi Guarantee -->
+        <article class="pillar-card">
+          <div class="pillar-img-wrap">
+            <img src="/assets/pillar_complete_wifi.jpg" alt="Cymbal Complete Wi-Fi 3 Smart Mesh Discs" />
+            <span class="pillar-category-tag">2. Smart Hardware</span>
+            <span class="pillar-included-tag">Included in Bundle</span>
+          </div>
+          <div class="pillar-body">
+            <h3 class="pillar-title">Complete Wi-Fi Guarantee</h3>
+            <div class="pillar-standalone-note">Wall-to-wall signal in every room (£20/mo standalone)</div>
+            <ul class="pillar-highlights">
+              <li><span class="check-dot">✓</span> 3 Smart Wi-Fi Mesh Discs included</li>
+              <li><span class="check-dot">✓</span> Eliminates kitchen &amp; bedroom dead zones</li>
+              <li><span class="check-dot">✓</span> Hybrid 4G Backup so you never drop offline</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Pillar 3: Entertainment & Gaming -->
+        <article class="pillar-card">
+          <div class="pillar-img-wrap">
+            <img src="/assets/pillar_tv_xbox.jpg" alt="Cymbal TV Sport and Xbox Game Pass Ultimate" />
+            <span class="pillar-category-tag">3. Entertainment &amp; Gaming</span>
+            <span class="pillar-included-tag">Included in Bundle</span>
+          </div>
+          <div class="pillar-body">
+            <h3 class="pillar-title">TV Sport &amp; Xbox Game Pass</h3>
+            <div class="pillar-standalone-note">For the kids’ consoles &amp; family sport (£15/mo standalone)</div>
+            <ul class="pillar-highlights">
+              <li><span class="check-dot">✓</span> Xbox Game Pass Ultimate included</li>
+              <li><span class="check-dot">✓</span> Live 4K Family Sport channels</li>
+              <li><span class="check-dot">✓</span> Whole-Home Cyber Security protection</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         STAGE 3: ILLUSTRATIVE HOME WI-FI MESH COVERAGE MAP (`mesh_coverage_map`)
+         ====================================================================== -->
+    <section class="stage-view" id="view-mesh_coverage_map">
+      <div class="stage-header-strip">
+        <div>
+          <span class="stage-pill">📡 Complete Wi-Fi Home Coverage • 4-Bedroom Layout</span>
+          <h2 class="stage-headline">How 3 Smart Discs blanket every room in your home</h2>
+        </div>
+      </div>
+
+      <div class="mesh-showcase-card">
+        <div class="mesh-image-stage">
+          <img id="mesh-cutaway-img" src="/assets/home_mesh_cutaway.jpg" alt="3D cutaway of Geoff's 4-bedroom home with 3 Smart Wi-Fi Mesh Discs" />
+
+          <div class="mesh-pin" id="pin-upstairs" style="top: 26%; left: 42%;">
+            <span class="pin-pulse"></span>
+            <span id="pin-upstairs-text">Disc 3 • Upstairs Bedrooms (8ms Gaming)</span>
+          </div>
+
+          <div class="mesh-pin" id="pin-hallway" style="bottom: 24%; left: 18%;">
+            <span class="pin-pulse"></span>
+            <span id="pin-hallway-text">Smart Hub 3 + Disc 1 • Front Hallway</span>
+          </div>
+
+          <div class="mesh-pin" id="pin-kitchen" style="bottom: 22%; right: 20%;">
+            <span class="pin-pulse"></span>
+            <span id="pin-kitchen-text">Disc 2 • Rear Kitchen-Diner (Full Signal)</span>
+          </div>
+        </div>
+
+        <div class="mesh-sidebar">
+          <div>
+            <div class="mesh-mode-pills">
+              <button class="mesh-mode-pill active" id="mode-btn-after" type="button" onclick="applyMeshViewMode('after_mesh_coverage')">
+                With 3 Smart Discs
+              </button>
+              <button class="mesh-mode-pill" id="mode-btn-before" type="button" onclick="applyMeshViewMode('before_dead_zones')">
+                Before (Dead Zones)
+              </button>
+              <button class="mesh-mode-pill" id="mode-btn-4g" type="button" onclick="applyMeshViewMode('hybrid_4g_failover')">
+                Hybrid 4G Backup
+              </button>
+            </div>
+
+            <h3 class="card-title-lg" id="mesh-sidebar-title">Seamless 900 Mbps coverage in every corner</h3>
+            <p class="card-sub-clean" id="mesh-sidebar-desc">
+              Three intelligent discs work together as one network—automatically handing your devices to the strongest signal as you move through the house.
+            </p>
+
+            <div class="room-coverage-list">
+              <div class="room-coverage-item">
+                <div>
+                  <div class="room-name">Front Hallway</div>
+                  <div class="room-sub">Smart Hub 3 + Mesh Disc 1</div>
+                </div>
+                <span class="status-chip green" id="room-badge-hallway">900 Mbps</span>
+              </div>
+
+              <div class="room-coverage-item">
+                <div>
+                  <div class="room-name">Rear Kitchen-Diner Extension</div>
+                  <div class="room-sub">Smart Mesh Disc 2</div>
+                </div>
+                <span class="status-chip green" id="room-badge-kitchen">Zero Dropouts</span>
+              </div>
+
+              <div class="room-coverage-item">
+                <div>
+                  <div class="room-name">Upstairs Kids’ Bedrooms</div>
+                  <div class="room-sub">Smart Mesh Disc 3 • Xbox Consoles</div>
+                </div>
+                <span class="status-chip green" id="room-badge-upstairs">8ms Ultra-Low Ping</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="cta-coral-btn" type="button" style="width: 100%; justify-content: center;" onclick="switchStorefrontView('checkout_and_servicenow')">
+            <span>Upgrade My Home — £68/mo</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         STAGE 4: 1-CLICK MULTI-PRODUCT CHECKOUT & PRIORITY ENGINEER (`checkout_and_servicenow`)
+         ====================================================================== -->
+    <section class="stage-view" id="view-checkout_and_servicenow">
+      <div class="stage-header-strip">
+        <div>
+          <span class="stage-pill" style="background: var(--cymbal-green-soft); color: var(--cymbal-green);">✓ Order Ready &amp; Engineer Reserved</span>
+          <h2 class="stage-headline">Your Cymbal One Home Upgrade is ready</h2>
+        </div>
+      </div>
+
+      <div class="checkout-grid">
+        <!-- Left Card: Multi-Product Basket Summary -->
+        <div class="visual-card">
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px;">
+              <h3 class="card-title-lg" style="margin:0;">Cymbal One Converged Home Bundle</h3>
+              <span class="status-chip green">Save £22/mo</span>
+            </div>
+
+            <div class="basket-item-row">
+              <img class="basket-thumb" src="/assets/pillar_fibre_900.jpg" alt="Full Fibre 900" />
+              <div class="basket-item-info">
+                <div class="basket-item-title">Cymbal Full Fibre 900 + Smart Hub 3</div>
+                <div class="basket-item-sub">900 Mbps symmetrical speeds • 24-month plan</div>
+              </div>
+              <div class="basket-item-price">Included</div>
+            </div>
+
+            <div class="basket-item-row">
+              <img class="basket-thumb" src="/assets/pillar_complete_wifi.jpg" alt="3 Smart Wi-Fi Mesh Discs" />
+              <div class="basket-item-info">
+                <div class="basket-item-title">Complete Wi-Fi (3 Smart Discs + 4G Backup)</div>
+                <div class="basket-item-sub">Whole-Home Wi-Fi Guarantee • Free Priority Install</div>
+              </div>
+              <div class="basket-item-price">Included</div>
+            </div>
+
+            <div class="basket-item-row">
+              <img class="basket-thumb" src="/assets/pillar_tv_xbox.jpg" alt="TV Sport & Xbox Game Pass" />
+              <div class="basket-item-info">
+                <div class="basket-item-title">Cymbal TV Sport &amp; Xbox Game Pass Ultimate</div>
+                <div class="basket-item-sub">Includes Multi-Device Cyber Security</div>
+              </div>
+              <div class="basket-item-price">Included</div>
+            </div>
+
+            <div class="basket-item-row">
+              <div class="basket-item-info">
+                <div class="basket-item-title" style="color: var(--cymbal-green);">Instant Bill Refund Credit (#INV-8841)</div>
+                <div class="basket-item-sub">Refunded directly to Visa •••• 4412</div>
+              </div>
+              <div class="basket-item-price">-£12.00</div>
+            </div>
+          </div>
+
+          <div class="basket-total-bar">
+            <div>
+              <div style="font-size: 12.5px; color: rgba(255,255,255,0.72); font-weight: 600;">New All-in-One Monthly Total</div>
+              <div style="font-size: 13px; color: #80DEEA; font-weight: 600;">Upfront Installation: £0.00 (Free)</div>
+            </div>
+            <div style="font-size: 32px; font-weight: 800;" id="checkout-monthly-total">£68.00<span style="font-size:15px;font-weight:500;">/mo</span></div>
+          </div>
+        </div>
+
+        <!-- Right Card: Pre-Provisioned Engineer Visit & Omnichannel Continuity -->
+        <div class="visual-card">
+          <div>
+            <div class="status-chip-row" style="margin-bottom: 14px;">
+              <span class="status-chip green">✓ Priority Engineer Pre-Booked</span>
+              <span class="status-chip neutral" id="sn-ticket-pill">Ref: INC-904821</span>
+            </div>
+
+            <h3 class="card-title-lg">White-Glove Home Setup Included</h3>
+            <p class="card-sub-clean">
+              We’ve pre-booked your Cymbal engineer and shared your home coverage map so they can set up all three discs in the right rooms.
+            </p>
+
+            <div class="appointment-box">
+              <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cymbal-teal);">
+                Reserved Appointment Slot
+              </div>
+              <div class="appointment-slot" id="sn-slot-display">Thursday, 10:00 AM – 12:00 PM</div>
+              <div style="font-size: 13.5px; color: #334155; font-weight: 600;">
+                14 Oakwood Avenue • Hallway, Kitchen-Diner &amp; Upstairs Landing
+              </div>
+            </div>
+
+            <div class="status-chip-row">
+              <span class="status-chip neutral">✓ Router diagnostics attached</span>
+              <span class="status-chip neutral">✓ 3-Disc floorplan attached</span>
+              <span class="status-chip neutral">✓ Synced for Store &amp; Call Advisors</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         PERSISTENT BOTTOM TRUST STRIP (EXACT SCREENSHOT MATCH)
+         ====================================================================== -->
+    <section class="trust-strip">
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <div>
+          <div class="trust-title">99% 5G population coverage</div>
+          <div class="trust-sub">The UK’s fast-growing 5G network.</div>
+        </div>
+      </div>
+
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </div>
+        <div>
+          <div class="trust-title">Whole-home Wi-Fi guarantee</div>
+          <div class="trust-sub">Strong signal in every room or £100 back.</div>
+        </div>
+      </div>
+
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <div>
+          <div class="trust-title">Hybrid 4G backup included</div>
+          <div class="trust-sub">Automatic failover on Cymbal One plans.</div>
+        </div>
+      </div>
+
+      <div class="trust-item">
+        <div class="trust-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+        </div>
+        <div>
+          <div class="trust-title">UK-based support</div>
+          <div class="trust-sub">Chat, call or visit 200+ stores.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Subtle Presenter View Switcher (Also Driven Automatically by CXAS Client Function `update_storefront_ui`) -->
+  <div class="presenter-dock" aria-label="Stage Switcher">
+    <button class="dock-btn active" data-view="home" type="button" onclick="switchStorefrontView('home')">Home</button>
+    <button class="dock-btn" data-view="account_diagnostics" type="button" onclick="switchStorefrontView('account_diagnostics')">1. Care &amp; £12 Refund</button>
+    <button class="dock-btn" data-view="tailored_bundle_showcase" type="button" onclick="switchStorefrontView('tailored_bundle_showcase')">2. Tailored Bundle</button>
+    <button class="dock-btn" data-view="mesh_coverage_map" type="button" onclick="switchStorefrontView('mesh_coverage_map')">3. Home Wi-Fi Map</button>
+    <button class="dock-btn" data-view="checkout_and_servicenow" type="button" onclick="switchStorefrontView('checkout_and_servicenow')">4. Order Confirmed</button>
+  </div>
+
+  <script>
+    const DEFAULT_DEPLOYMENT_NAME =
+      "projects/1097682577517/locations/eu/apps/22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0/deployments/f52e56bd-de22-4202-8ffa-af37882a3d1a";
+
+    /* ========================================================================
+       1. STOREFRONT VIEW & MESH VISUALIZER CONTROLLER
+       ======================================================================== */
+    function switchStorefrontView(viewName) {
+      const normalized = String(viewName || "home").trim();
+      const validViews = [
+        "home",
+        "account_diagnostics",
+        "tailored_bundle_showcase",
+        "mesh_coverage_map",
+        "checkout_and_servicenow",
+      ];
+      const targetView = validViews.includes(normalized) ? normalized : "home";
+
+      document.querySelectorAll(".stage-view").forEach((el) => {
+        el.classList.toggle("active", el.id === `view-${targetView}`);
+      });
+
+      document.querySelectorAll(".dock-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.getAttribute("data-view") === targetView);
+      });
+
+      if (targetView === "checkout_and_servicenow") {
+        setBasketCount(3);
+      }
+    }
+
+    function setBasketCount(count) {
+      const badge = document.getElementById("header-basket-count");
+      if (!badge) return;
+      badge.textContent = String(count);
+      badge.classList.add("bump");
+      setTimeout(() => badge.classList.remove("bump"), 300);
+    }
+
+    function applyMeshViewMode(mode) {
+      const normalized = String(mode || "after_mesh_coverage").trim();
+      const img = document.getElementById("mesh-cutaway-img");
+      const title = document.getElementById("mesh-sidebar-title");
+      const desc = document.getElementById("mesh-sidebar-desc");
+      const pinKitchen = document.getElementById("pin-kitchen");
+      const pinUpstairs = document.getElementById("pin-upstairs");
+      const pinKitchenText = document.getElementById("pin-kitchen-text");
+      const pinUpstairsText = document.getElementById("pin-upstairs-text");
+      const badgeKitchen = document.getElementById("room-badge-kitchen");
+      const badgeUpstairs = document.getElementById("room-badge-upstairs");
+
+      document.getElementById("mode-btn-after").classList.toggle("active", normalized === "after_mesh_coverage" || normalized === "upstairs_gaming_view");
+      document.getElementById("mode-btn-before").classList.toggle("active", normalized === "before_dead_zones");
+      document.getElementById("mode-btn-4g").classList.toggle("active", normalized === "hybrid_4g_failover");
+
+      if (normalized === "before_dead_zones") {
+        if (img) img.style.filter = "saturate(0.45) contrast(1.05)";
+        pinKitchen.classList.add("deadzone-mode");
+        pinUpstairs.classList.add("deadzone-mode");
+        pinKitchenText.textContent = "Rear Kitchen-Diner • Weak Signal (-81 dBm)";
+        pinUpstairsText.textContent = "Upstairs Bedrooms • Console Lag Spikes";
+        title.textContent = "Before: Single hallway router leaves dead zones";
+        desc.textContent = "A single Smart Hub 2 by the front door loses signal strength through internal walls to the kitchen extension and upstairs back bedrooms.";
+        badgeKitchen.className = "status-chip amber";
+        badgeKitchen.textContent = "Weak (-81 dBm)";
+        badgeUpstairs.className = "status-chip amber";
+        badgeUpstairs.textContent = "Lag Spikes";
+      } else if (normalized === "hybrid_4g_failover") {
+        if (img) img.style.filter = "none";
+        pinKitchen.classList.remove("deadzone-mode");
+        pinUpstairs.classList.remove("deadzone-mode");
+        pinKitchenText.textContent = "Disc 2 • Backed by 4G Mobile Failover";
+        pinUpstairsText.textContent = "Disc 3 • Uninterrupted Gaming & Calls";
+        title.textContent = "Always-On Hybrid 4G Backup included";
+        desc.textContent = "If your street fibre line ever has an issue, Smart Hub 3 automatically switches to Cymbal’s 4G/5G mobile network in milliseconds.";
+        badgeKitchen.className = "status-chip green";
+        badgeKitchen.textContent = "4G Protected";
+        badgeUpstairs.className = "status-chip green";
+        badgeUpstairs.textContent = "Always Online";
+      } else {
+        if (img) img.style.filter = "none";
+        pinKitchen.classList.remove("deadzone-mode");
+        pinUpstairs.classList.remove("deadzone-mode");
+        pinKitchenText.textContent = "Disc 2 • Rear Kitchen-Diner (Full Signal)";
+        pinUpstairsText.textContent = "Disc 3 • Upstairs Bedrooms (8ms Gaming)";
+        title.textContent = "Seamless 900 Mbps coverage in every corner";
+        desc.textContent = "Three intelligent discs work together as one network—automatically handing your devices to the strongest signal as you move through the house.";
+        badgeKitchen.className = "status-chip green";
+        badgeKitchen.textContent = "Zero Dropouts";
+        badgeUpstairs.className = "status-chip green";
+        badgeUpstairs.textContent = "8ms Ultra-Low Ping";
+      }
+    }
+
+    /* ========================================================================
+       2. CXAS CLIENT FUNCTION HANDLER: `update_storefront_ui`
+       ======================================================================== */
+    function handleUpdateStorefrontUi(args = {}) {
+      console.log("[ClientFunction] update_storefront_ui:", args);
+      const requestedView = String(args.view || "tailored_bundle_showcase").trim();
+      const requestedMode = String(args.view_mode || "after_mesh_coverage").trim();
+
+      let parsedPayload = {};
+      if (args.payload_json && typeof args.payload_json === "string") {
+        try {
+          parsedPayload = JSON.parse(args.payload_json);
+        } catch (_) {}
+      }
+
+      if (requestedView === "mesh_coverage_map") {
+        applyMeshViewMode(requestedMode);
+      }
+
+      if (requestedView === "checkout_and_servicenow") {
+        setBasketCount(3);
+        if (parsedPayload.ticket_reference) {
+          const el = document.getElementById("sn-ticket-pill");
+          if (el) el.textContent = `Ref: ${parsedPayload.ticket_reference}`;
+        }
+        if (parsedPayload.engineer_appointment_slot) {
+          const slotEl = document.getElementById("sn-slot-display");
+          if (slotEl) slotEl.textContent = parsedPayload.engineer_appointment_slot;
+        }
+      }
+
+      switchStorefrontView(requestedView);
+
+      return Promise.resolve({
+        status: "OK",
+        activeView: requestedView,
+        activeViewMode: requestedMode,
+      });
+    }
+
+    /* ========================================================================
+       3. BIDI WEBCHANNEL `ToolResponses` BRIDGE FOR `<chat-messenger>`
+       (Ensures live Bidi voice sessions receive ClientFunction tool responses
+        over the open WebChannel stream so the agent's follow-up audio plays.)
+       ======================================================================== */
+    function jsValueToJspbValue(val) {
+      if (val === null || val === undefined) return [0];
+      if (typeof val === "number") return [null, Number.isFinite(val) ? val : String(val)];
+      if (typeof val === "string") return [null, null, val];
+      if (typeof val === "boolean") return [null, null, null, val ? 1 : 0];
+      if (Array.isArray(val)) {
+        return [null, null, null, null, null, [val.map(jsValueToJspbValue)]];
+      }
+      if (typeof val === "object") {
+        return [null, null, null, null, jsObjectToJspbStruct(val)];
+      }
+      return [null, null, String(val)];
+    }
+
+    function jsObjectToJspbStruct(obj) {
+      const entries = [];
+      for (const [k, v] of Object.entries(obj || {})) {
+        if (v === undefined) continue;
+        entries.push([String(k), jsValueToJspbValue(v)]);
+      }
+      return entries.length > 0 ? [entries] : [];
+    }
+
+    function findActiveBidiStream(presenter) {
+      if (!presenter) return null;
+      const candidates = [presenter.bidiClient, presenter.pa, ...Object.values(presenter)];
+      for (const candidate of candidates) {
+        if (
+          candidate &&
+          typeof candidate === "object" &&
+          candidate.stream &&
+          typeof candidate.stream.sendMessage === "function" &&
+          typeof candidate.stream.isConnected === "function" &&
+          candidate.stream.isConnected()
+        ) {
+          return candidate.stream;
+        }
+      }
+      return null;
+    }
+
+    function installBidiToolResponseBridge(cm) {
+      if (!cm || !cm.presenter || cm.presenter.__bidiToolBridgeInstalled) return;
+      const presenter = cm.presenter;
+      const origSend = presenter.sendClientSideFunctionCallResult
+        ? presenter.sendClientSideFunctionCallResult.bind(presenter)
+        : null;
+
+      presenter.sendClientSideFunctionCallResult = function (functionCallResult) {
+        const bidiStream = findActiveBidiStream(presenter);
+        if (bidiStream && functionCallResult) {
+          const responseObj = functionCallResult.error
+            ? { error: functionCallResult.error }
+            : functionCallResult.output || { status: "OK" };
+          const toolResponseJspb = [
+            functionCallResult.cesToolCallId || "",
+            functionCallResult.tool || "",
+            jsObjectToJspbStruct(responseObj),
+          ];
+          const toolResponsesJspb = [[toolResponseJspb]];
+          const sessionInputJspb = [null, null, toolResponsesJspb];
+          const bidiClientMessageJspb = [null, sessionInputJspb];
+
+          bidiStream.sendMessage(bidiClientMessageJspb);
+          return Promise.resolve();
+        }
+        if (origSend) {
+          return origSend(functionCallResult);
+        }
+        return Promise.resolve();
+      };
+
+      presenter.__bidiToolBridgeInstalled = true;
+    }
+
+    function scrubPayloadStrings(value, seen = new WeakSet()) {
+      if (typeof value === "string") {
+        return window.stripSpeechTags ? window.stripSpeechTags(value) : value;
+      }
+      if (!value || typeof value !== "object") return value;
+      if (value instanceof ArrayBuffer || ArrayBuffer.isView(value) || value instanceof Blob) {
+        return value;
+      }
+      if (seen.has(value)) return value;
+      seen.add(value);
+
+      if (Array.isArray(value)) {
+        for (let i = 0; i < value.length; i++) {
+          value[i] = scrubPayloadStrings(value[i], seen);
+        }
+        return value;
+      }
+
+      // Map productDetails imageUris to local studio product images AND automatically switch the main storefront view to tailored_bundle_showcase whenever show_product_carousel or show_product_comparison arrives
+      if (Array.isArray(value.productDetails) && value.productDetails.length > 0) {
+        if (typeof switchStorefrontView === "function") {
+          try {
+            const activeStage = document.querySelector(".stage-view.active");
+            const activeId = activeStage ? activeStage.id : "";
+            if (activeId !== "view-tailored_bundle_showcase") {
+              switchStorefrontView("tailored_bundle_showcase");
+            }
+          } catch (_) {}
+        }
+        if (window.resolveLocalProductImage) {
+          value.productDetails.forEach((item, idx) => {
+            if (item && typeof item === "object") {
+              const localUri = window.resolveLocalProductImage(
+                `${item.title || ""} ${item.name || ""} ${item.productId || ""} ${item.id || ""}`,
+                idx
+              );
+              item.imageUris = [localUri];
+              if (item.imageUri) item.imageUri = localUri;
+            }
+          });
+        }
+      }
+
+      for (const key of Object.keys(value)) {
+        // Never mutate binary audio or tool IDs
+        if (key === "audio" || key === "inputAudio" || key === "outputAudio" || key === "tool" || key === "id") {
+          continue;
+        }
+        try {
+          value[key] = scrubPayloadStrings(value[key], seen);
+        } catch (_) {}
+      }
+      return value;
+    }
+
+    function installSpeechTagScrubber(cm) {
+      if (!cm || cm.__speechScrubberInstalled) return;
+      cm.__speechScrubberInstalled = true;
+
+      if (cm.presenter) {
+        const presenter = cm.presenter;
+        const proto = Object.getPrototypeOf(presenter);
+        const methodNames = new Set([
+          ...Object.keys(presenter),
+          ...(proto ? Object.getOwnPropertyNames(proto) : []),
+        ]);
+
+        methodNames.forEach((name) => {
+          if (
+            name === "constructor" ||
+            name === "sendClientSideFunctionCallResult" ||
+            typeof presenter[name] !== "function"
+          ) {
+            return;
+          }
+          if (/^(handle|on|add|append|update|render|process|receive)/i.test(name)) {
+            const origFn = presenter[name].bind(presenter);
+            presenter[name] = function (...args) {
+              try {
+                args.forEach((arg) => scrubPayloadStrings(arg));
+              } catch (_) {}
+              const res = origFn(...args);
+              if (window.__scrubChatMessengerTree) {
+                requestAnimationFrame(() => window.__scrubChatMessengerTree(cm));
+              }
+              return res;
+            };
+          }
+        });
+      }
+
+      // Continuous lightweight pass over chat-messenger Shadow DOM during active sessions
+      setInterval(() => {
+        if (window.__scrubChatMessengerTree) {
+          window.__scrubChatMessengerTree(cm);
+        }
+      }, 150);
+    }
+
+    function registerAllClientFunctions(cm, clientToolsMap = {}) {
+      installBidiToolResponseBridge(cm);
+      installSpeechTagScrubber(cm);
+
+      const handlers = {
+        update_storefront_ui: handleUpdateStorefrontUi,
+      };
+
+      Object.entries(handlers).forEach(([fnName, handler]) => {
+        if (typeof cm.registerClientSideFunctionForAllTools === "function") {
+          cm.registerClientSideFunctionForAllTools(fnName, handler);
+        }
+        if (cm.presenter && typeof cm.presenter.registerClientSideFunctionForAllTools === "function") {
+          cm.presenter.registerClientSideFunctionForAllTools(fnName, handler);
+        }
+        cm.registerClientSideFunction(fnName, fnName, handler);
+
+        const meta = clientToolsMap[fnName];
+        if (meta && meta.toolId) {
+          if (typeof cm.registerClientSideFunctionForAllTools === "function") {
+            cm.registerClientSideFunctionForAllTools(meta.toolId, handler);
+          }
+          if (cm.presenter && typeof cm.presenter.registerClientSideFunctionForAllTools === "function") {
+            cm.presenter.registerClientSideFunctionForAllTools(meta.toolId, handler);
+          }
+          cm.registerClientSideFunction(meta.toolNameByProjectNumber, meta.toolId, handler);
+          cm.registerClientSideFunction(meta.toolNameByProjectNumber, meta.toolNameByProjectNumber, handler);
+          cm.registerClientSideFunction(meta.toolNameByProjectNumber, fnName, handler);
+          cm.registerClientSideFunction(meta.toolNameByProjectId, meta.toolId, handler);
+          cm.registerClientSideFunction(meta.toolNameByProjectId, meta.toolNameByProjectId, handler);
+          cm.registerClientSideFunction(meta.toolNameByProjectId, fnName, handler);
+        }
+      });
+    }
+
+    window.addEventListener("chat-messenger-loaded", async () => {
+      let deploymentName = DEFAULT_DEPLOYMENT_NAME;
+      let clientToolsMap = {};
+      try {
+        const res = await fetch("/api/config");
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg.deploymentName) deploymentName = cfg.deploymentName;
+          if (cfg.clientTools) clientToolsMap = cfg.clientTools;
+        }
+      } catch (_) {}
+
+      const context = chatSdk.prebuilts.ces.createContext({
+        deploymentName,
+        tokenBroker: {
+          enableTokenBroker: true,
+          enableRecaptcha: false,
+        },
+        enableWelcomeEvent: false,
+      });
+
+      chatSdk.registerContext(context);
+      window.__cesContext = context;
+
+      const cm = document.querySelector("chat-messenger");
+      if (cm) {
+        cm.suppressWelcomeMessage = true;
+        // Clear any residual stored session messages on boot so the panel starts completely empty
+        try {
+          if (cm.presenter && cm.presenter.storageHandler && typeof cm.presenter.storageHandler.clearAll === "function") {
+            cm.presenter.storageHandler.clearAll({ clearAuthentication: false });
+          }
+          if (typeof cm.startNewSession === "function") {
+            cm.startNewSession({ clearAuthentication: false });
+          }
+        } catch (_) {}
+
+        cm.setQueryParameters({
+          sessionParameters: {
+            customer_id: "CUST-GEOFF-001",
+          },
+        });
+        registerAllClientFunctions(cm, clientToolsMap);
+
+        // Expand main storefront to full width if the user closes the chat widget
+        const closeBtn = document.querySelector("chat-messenger-close-button");
+        if (closeBtn) {
+          closeBtn.addEventListener("click", () => {
+            document.body.classList.add("chat-closed");
+          });
+        }
+        cm.addEventListener("df-chat-open-changed", (e) => {
+          if (e && e.detail && typeof e.detail.isOpen === "boolean") {
+            document.body.classList.toggle("chat-closed", !e.detail.isOpen);
+          }
+        });
+      }
+    });
+  </script>
+
+  <chat-messenger
+    suppress-welcome-message
+    language-code="en"
+    max-query-length="-1"
+    url-allowlist="*">
+    <chat-messenger-container
+      chat-title="Cymbal Concierge"
+      chat-title-icon="https://gstatic.com/dialogflow-console/common/assets/ccai-favicons/conversational_agents.png"
+      enable-audio-input
+      enable-file-upload>
+      <chat-reset-session-button
+        slot="titlebar-actions"
+        title-text="Start new chat">
+      </chat-reset-session-button>
+      <chat-toggle-dialog-button
+        slot="titlebar-actions"
+        title-text-expanded="Collapse"
+        title-text-collapsed="Expand">
+      </chat-toggle-dialog-button>
+      <chat-messenger-close-button
+        slot="titlebar-actions"
+        title-text="Close">
+      </chat-messenger-close-button>
+    </chat-messenger-container>
+  </chat-messenger>
+
+</body>
+</html>

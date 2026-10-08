@@ -1,0 +1,21 @@
+# Python & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local build & workflow artifacts
+lint_summary.json
+scaffolder_manifest.json
+todo.md
+*.log

@@ -1,0 +1,13 @@
+{
+  "name": "complete_converged_checkout",
+  "displayName": "complete_converged_checkout",
+  "executionType": "SYNCHRONOUS",
+  "toolFakeConfig": {
+    "enableFakeMode": true
+  },
+  "pythonFunction": {
+    "name": "complete_converged_checkout",
+    "pythonCode": "tools/complete_converged_checkout/python_function/python_code.py",
+    "description": "Injects all 3 pillars of the Cymbal One Converged Home Bundle plus the -£12.00 INV-8841 refund credit and free priority installation into basket_state, pre-provisions ServiceNow ticket INC-904821 (Thursday, 10:00 AM – 12:00 PM) with attached telemetry and 3-disc house placement plan in servicenow_handover_payload, and returns the checkout_and_servicenow storefront payload.\n\nCall this tool silently alongside update_storefront_ui(view='checkout_and_servicenow') without speaking a pre-call filler phrase first.\n\nWhen to Call:\n- Call in Stage 5 when the customer confirms they want help with installation, agrees to upgrade their home, or asks to add the Cymbal One Converged Home Bundle to their basket.\n\nWhen NOT to Call:\n- Do NOT call before the customer has explored the bundle and confirmed they want to proceed."
+  }
+}

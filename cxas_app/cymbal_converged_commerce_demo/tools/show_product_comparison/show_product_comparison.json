@@ -1,0 +1,105 @@
+{
+  "name": "show_product_comparison",
+  "displayName": "show_product_comparison",
+  "widgetTool": {
+    "name": "show_product_comparison",
+    "description": "Renders a side-by-side UI Product Comparison table widget in the chat window comparing Geoff's current Out-of-Contract Fibre 100 (£44.00/mo), Standalone Upgrades (£90.00/mo), and the Cymbal One Converged Home Bundle (£68.00/mo, saving £22.00/mo). Before calling this tool, speak a brief conversational pacing phrase. Call this tool immediately after build_tailored_home_bundle(view_type='comparison') when Geoff asks to compare prices or value side-by-side.",
+    "widgetType": "PRODUCT_COMPARISON",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "features": {
+          "type": "ARRAY",
+          "description": "A list of feature rows comparing the options side-by-side.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "label": {
+                "type": "STRING",
+                "description": "The name of the feature being compared in this row (e.g., Monthly Price, Core Broadband Speed, Whole-Home Wi-Fi Hardware, Entertainment, Gaming & Security)."
+              },
+              "productSpecs": {
+                "type": "ARRAY",
+                "description": "A list of specifications, one for each product option being compared, matching the order of productDetails.",
+                "items": {
+                  "type": "OBJECT",
+                  "properties": {
+                    "text": {
+                      "type": "STRING",
+                      "description": "The text describing the feature specification of a specific option."
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "label",
+              "productSpecs"
+            ]
+          }
+        },
+        "productDetails": {
+          "type": "ARRAY",
+          "description": "A list of objects containing the core details of each option being compared.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "imageUris": {
+                "type": "ARRAY",
+                "description": "A list of direct URLs to images displaying the option.",
+                "items": {
+                  "type": "STRING"
+                }
+              },
+              "price": {
+                "type": "STRING",
+                "description": "The monthly price of the option."
+              },
+              "productId": {
+                "type": "STRING",
+                "description": "The unique identifier for this option."
+              },
+              "rating": {
+                "type": "NUMBER",
+                "description": "The average user rating for the option on a scale of 1.0 to 5.0."
+              },
+              "subtitle": {
+                "type": "STRING",
+                "description": "A secondary line of text summarizing the option."
+              },
+              "title": {
+                "type": "STRING",
+                "description": "The primary name of the option as listed."
+              },
+              "uri": {
+                "type": "STRING",
+                "description": "The URL directing users to the full detail page."
+              }
+            },
+            "required": [
+              "title",
+              "productId",
+              "price"
+            ]
+          }
+        },
+        "title": {
+          "type": "STRING",
+          "description": "The main headline for the comparison card."
+        }
+      },
+      "required": [
+        "title",
+        "productDetails",
+        "features"
+      ]
+    },
+    "textResponseConfig": {
+      "type": "LLM_GENERATED",
+      "textResponseInstruction": "Provide a clear, natural spoken response in British English (2 to 3 concise sentences, roughly 30 to 55 words excluding bracketed tags, with 1 to 3 affective prosody tags such as [prosody rate=\"68%\"], [neutral], [short pause], and no exclamation marks) pointing Geoff to the comparison table on screen, highlighting how the £68/mo Cymbal One bundle saves £22/mo compared to £90/mo standalone while upgrading his £44/mo out-of-contract Fibre 100 plan, and asking if he would like to see the mesh coverage map or add the bundle to his basket."
+    }
+  }
+}

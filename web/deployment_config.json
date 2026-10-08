@@ -1,0 +1,22 @@
+{
+  "projectId": "ces-demo-emea",
+  "projectNumber": "1097682577517",
+  "location": "eu",
+  "appId": "22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0",
+  "appName": "projects/ces-demo-emea/locations/eu/apps/22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0",
+  "appVersion": "projects/ces-demo-emea/locations/eu/apps/22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0/versions/381c1897-d2f4-4bfd-97ac-f90485bd3ebd",
+  "versionDisplayName": "v-converged-20261007-202902",
+  "deploymentId": "f52e56bd-de22-4202-8ffa-af37882a3d1a",
+  "deploymentName": "projects/1097682577517/locations/eu/apps/22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0/deployments/f52e56bd-de22-4202-8ffa-af37882a3d1a",
+  "deploymentNameByProjectId": "projects/ces-demo-emea/locations/eu/apps/22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0/deployments/f52e56bd-de22-4202-8ffa-af37882a3d1a",
+  "webWidgetTitle": "Cymbal Concierge",
+  "clientTools": {
+    "update_storefront_ui": {
+      "functionName": "update_storefront_ui",
+      "toolId": "update_storefront_ui",
+      "toolNameByProjectId": "projects/ces-demo-emea/locations/eu/apps/22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0/tools/update_storefront_ui",
+      "toolNameByProjectNumber": "projects/1097682577517/locations/eu/apps/22e1dd89-dd92-4f83-b25f-0fc3d3ad0ae0/tools/update_storefront_ui"
+    }
+  },
+  "updatedAt": "2026-10-07T20:29:03.139179+00:00"
+}

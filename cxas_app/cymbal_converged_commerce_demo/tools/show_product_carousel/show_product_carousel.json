@@ -1,0 +1,62 @@
+{
+  "name": "show_product_carousel",
+  "displayName": "show_product_carousel",
+  "widgetTool": {
+    "name": "show_product_carousel",
+    "description": "Renders an interactive UI Product Carousel widget in the chat window displaying the 3-Pillar Cymbal One Converged Home Bundle cards (Cymbal Full Fibre 900, Complete Wi-Fi Guarantee with 3 Smart Discs and 4G Backup, and Cymbal TV Sport & Xbox Game Pass Ultimate). Before calling this tool, speak a brief conversational pacing phrase. Call this tool immediately after build_tailored_home_bundle when presenting the 3-pillar bundle in Step 2. Pass productDetails from widget_payload in active_widget_data.",
+    "widgetType": "PRODUCT_CAROUSEL",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "productDetails": {
+          "type": "ARRAY",
+          "description": "Required. An ordered list of the 3 bundled product pillars to be displayed in the carousel.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "imageUris": {
+                "type": "ARRAY",
+                "description": "A list of direct URLs to images displaying the product pillar.",
+                "items": {
+                  "type": "STRING"
+                }
+              },
+              "price": {
+                "type": "STRING",
+                "description": "The bundle inclusion and standalone value of the product pillar."
+              },
+              "productId": {
+                "type": "STRING",
+                "description": "The unique identifier for this product pillar (ITEM-FIBRE-900, ITEM-COMPLETE-WIFI, ITEM-TV-XBOX-SECURITY)."
+              },
+              "subtitle": {
+                "type": "STRING",
+                "description": "A secondary line of text highlighting key specs and household benefits."
+              },
+              "title": {
+                "type": "STRING",
+                "description": "Required. The primary name of the product pillar."
+              },
+              "uri": {
+                "type": "STRING",
+                "description": "The URL directing users to the product detail section."
+              }
+            },
+            "required": [
+              "title",
+              "productId",
+              "price"
+            ]
+          }
+        }
+      },
+      "required": [
+        "productDetails"
+      ]
+    },
+    "textResponseConfig": {
+      "type": "LLM_GENERATED",
+      "textResponseInstruction": "Provide a clear, natural spoken response in British English (2 to 3 concise sentences, roughly 35 to 60 words excluding bracketed tags, with 1 to 3 affective prosody tags such as [prosody rate=\"68%\"], [neutral], [positive], [short pause], and no exclamation marks) that explains how the 3 pillars (Full Fibre 900, 3 Smart Wi-Fi Discs with 4G Backup, and Cymbal TV Sport & Xbox Game Pass Ultimate) come together for £68 a month instead of £90 a month separately (saving £22 every month), and asks whether Geoff would like to see the home Wi-Fi coverage map on screen or add the bundle straight to his basket."
+    }
+  }
+}

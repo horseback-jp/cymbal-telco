@@ -1,0 +1,256 @@
+tests:
+  - name: resolve_billing_and_diagnostics_geoff_happy_path
+    tool: resolve_billing_and_diagnostics
+    args:
+      customer_id: "CUST-GEOFF-001"
+    variables:
+      customer_id: "CUST-GEOFF-001"
+      customer_name: "Geoffrey Horsfield (Geoff)"
+      billing_refund_status: "pending"
+      journey_stage: "discovery"
+    expectations:
+      response:
+        - path: "$.result.status"
+          operator: equals
+          value: "success"
+        - path: "$.result.customer_id"
+          operator: equals
+          value: "CUST-GEOFF-001"
+        - path: "$.result.customer_name"
+          operator: equals
+          value: "Geoffrey Horsfield (Geoff)"
+        - path: "$.result.billing_refund_status"
+          operator: equals
+          value: "refunded_12_gbp"
+        - path: "$.result.journey_stage"
+          operator: equals
+          value: "care_resolved"
+        - path: "$.result.refund_executed.invoice_id"
+          operator: equals
+          value: "INV-8841"
+        - path: "$.result.refund_executed.amount_gbp"
+          operator: equals
+          value: 12.0
+        - path: "$.result.refund_executed.payment_method"
+          operator: equals
+          value: "Visa ending 4412"
+        - path: "$.result.refund_executed.status"
+          operator: equals
+          value: "refunded_12_gbp"
+        - path: "$.result.telemetry_diagnosis.router_model"
+          operator: equals
+          value: "Smart Hub 2"
+        - path: "$.result.telemetry_diagnosis.connected_devices"
+          operator: equals
+          value: 14
+        - path: "$.result.telemetry_diagnosis.monthly_usage_gb"
+          operator: equals
+          value: 850
+        - path: "$.result.telemetry_diagnosis.packet_drops_24h"
+          operator: equals
+          value: 4
+        - path: "$.result.telemetry_diagnosis.weak_zones"
+          operator: length_equals
+          value: 2
+        - path: "$.result.telemetry_diagnosis.exchange_status"
+          operator: contains
+          value: "MANCHESTER-SOUTH-EX04"
+        - path: "$.result.current_plan.name"
+          operator: equals
+          value: "Fibre 100"
+        - path: "$.result.current_plan.contract_status"
+          operator: equals
+          value: "Out of Contract"
+        - path: "$.result.current_plan.monthly_price_gbp"
+          operator: equals
+          value: 44.0
+        - path: "$.result.storefront_payload_json"
+          operator: contains
+          value: "account_diagnostics"
+
+  - name: resolve_billing_and_diagnostics_default_fallback
+    tool: resolve_billing_and_diagnostics
+    args:
+      customer_id: ""
+    variables:
+      billing_refund_status: "pending"
+      journey_stage: "discovery"
+    expectations:
+      response:
+        - path: "$.result.status"
+          operator: equals
+          value: "success"
+        - path: "$.result.customer_id"
+          operator: equals
+          value: "CUST-GEOFF-001"
+        - path: "$.result.billing_refund_status"
+          operator: equals
+          value: "refunded_12_gbp"
+        - path: "$.result.journey_stage"
+          operator: equals
+          value: "care_resolved"
+        - path: "$.result.storefront_payload_json"
+          operator: is_not_null
+
+  - name: build_tailored_home_bundle_carousel_view
+    tool: build_tailored_home_bundle
+    args:
+      customer_id: "CUST-GEOFF-001"
+      view_type: "carousel"
+    variables:
+      customer_id: "CUST-GEOFF-001"
+      billing_refund_status: "refunded_12_gbp"
+      journey_stage: "care_resolved"
+    expectations:
+      response:
+        - path: "$.result.status"
+          operator: equals
+          value: "success"
+        - path: "$.result.customer_id"
+          operator: equals
+          value: "CUST-GEOFF-001"
+        - path: "$.result.bundle_id"
+          operator: equals
+          value: "BUNDLE-CYMBAL-ONE-HOME"
+        - path: "$.result.bundle_name"
+          operator: equals
+          value: "Cymbal One Converged Home Bundle"
+        - path: "$.result.journey_stage"
+          operator: equals
+          value: "bundle_pitched"
+        - path: "$.result.widget_tool_to_call"
+          operator: equals
+          value: "show_product_carousel"
+        - path: "$.result.pricing_summary.old_price_gbp"
+          operator: equals
+          value: 44.0
+        - path: "$.result.pricing_summary.standalone_total_gbp"
+          operator: equals
+          value: 90.0
+        - path: "$.result.pricing_summary.bundle_price_gbp"
+          operator: equals
+          value: 68.0
+        - path: "$.result.pricing_summary.monthly_savings_gbp"
+          operator: equals
+          value: 22.0
+        - path: "$.result.widget_payload.productDetails"
+          operator: length_equals
+          value: 3
+        - path: "$.result.storefront_payload_json"
+          operator: contains
+          value: "tailored_bundle_showcase"
+
+  - name: build_tailored_home_bundle_comparison_view
+    tool: build_tailored_home_bundle
+    args:
+      customer_id: "CUST-GEOFF-001"
+      view_type: "comparison"
+    variables:
+      customer_id: "CUST-GEOFF-001"
+      billing_refund_status: "refunded_12_gbp"
+      journey_stage: "care_resolved"
+    expectations:
+      response:
+        - path: "$.result.status"
+          operator: equals
+          value: "success"
+        - path: "$.result.bundle_id"
+          operator: equals
+          value: "BUNDLE-CYMBAL-ONE-HOME"
+        - path: "$.result.journey_stage"
+          operator: equals
+          value: "bundle_pitched"
+        - path: "$.result.widget_tool_to_call"
+          operator: equals
+          value: "show_product_comparison"
+        - path: "$.result.widget_payload.title"
+          operator: contains
+          value: "Price & Value Comparison"
+        - path: "$.result.widget_payload.productDetails"
+          operator: length_equals
+          value: 3
+        - path: "$.result.widget_payload.features"
+          operator: length_equals
+          value: 4
+        - path: "$.result.storefront_payload_json"
+          operator: contains
+          value: "BUNDLE-CYMBAL-ONE-HOME"
+
+  - name: complete_converged_checkout_confirmed_happy_path
+    tool: complete_converged_checkout
+    args:
+      customer_id: "CUST-GEOFF-001"
+      confirm_upgrade: "true"
+    variables:
+      customer_id: "CUST-GEOFF-001"
+      billing_refund_status: "refunded_12_gbp"
+      journey_stage: "bundle_pitched"
+    expectations:
+      response:
+        - path: "$.result.status"
+          operator: equals
+          value: "success"
+        - path: "$.result.order_id"
+          operator: equals
+          value: "ORD-CYM-904821"
+        - path: "$.result.journey_stage"
+          operator: equals
+          value: "checkout_complete"
+        - path: "$.result.basket.bundle_id"
+          operator: equals
+          value: "BUNDLE-CYMBAL-ONE-HOME"
+        - path: "$.result.basket.items"
+          operator: length_equals
+          value: 5
+        - path: "$.result.basket.monthly_total_gbp"
+          operator: equals
+          value: 68.0
+        - path: "$.result.basket.monthly_savings_gbp"
+          operator: equals
+          value: 22.0
+        - path: "$.result.basket.one_off_credit_gbp"
+          operator: equals
+          value: -12.0
+        - path: "$.result.basket.installation_fee_gbp"
+          operator: equals
+          value: 0.0
+        - path: "$.result.basket.checkout_status"
+          operator: equals
+          value: "ready_for_1_click_confirm"
+        - path: "$.result.servicenow_ticket.ticket_id"
+          operator: equals
+          value: "INC-904821"
+        - path: "$.result.servicenow_ticket.status"
+          operator: equals
+          value: "PRE_PROVISIONED"
+        - path: "$.result.servicenow_ticket.appointment_slot"
+          operator: equals
+          value: "Thursday, 10:00 AM – 12:00 PM"
+        - path: "$.result.servicenow_ticket.engineer_tier"
+          operator: equals
+          value: "Priority Cymbal Fibre & Mesh Specialist"
+        - path: "$.result.servicenow_ticket.disc_placement_plan"
+          operator: length_equals
+          value: 3
+        - path: "$.result.storefront_payload_json"
+          operator: contains
+          value: "checkout_and_servicenow"
+
+  - name: complete_converged_checkout_unconfirmed_guardrail
+    tool: complete_converged_checkout
+    args:
+      customer_id: "CUST-GEOFF-001"
+      confirm_upgrade: "false"
+    variables:
+      customer_id: "CUST-GEOFF-001"
+      journey_stage: "bundle_pitched"
+    expectations:
+      response:
+        - path: "$.result.status"
+          operator: equals
+          value: "error"
+        - path: "$.result.error"
+          operator: contains
+          value: "Customer did not confirm the upgrade"
+        - path: "$.result.agent_action"
+          operator: is_not_null

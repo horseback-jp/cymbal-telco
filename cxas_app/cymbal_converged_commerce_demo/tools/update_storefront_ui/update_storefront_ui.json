@@ -1,0 +1,48 @@
+{
+  "name": "update_storefront_ui",
+  "displayName": "update_storefront_ui",
+  "executionType": "SYNCHRONOUS",
+  "toolFakeConfig": {
+    "enableFakeMode": true
+  },
+  "clientFunction": {
+    "name": "update_storefront_ui",
+    "description": "Synchronizes the main Cymbal Telecom web storefront UI across the Care-to-Converged-Bundle customer journey: account_diagnostics (Live Diagnostics & £12.00 Instant Refund Confirmed banner), tailored_bundle_showcase (GEOFF'S TAILORED HOME BUNDLE 3-pillar showcase), mesh_coverage_map (Illustrative 4-bedroom Home Wi-Fi Mesh Coverage diagram), and checkout_and_servicenow (1-Click Multi-Product Order Confirmation + ServiceNow INC-904821 card). Call this tool silently in the same step as backend tools (passing view directly) without emitting a spoken filler phrase before the tool call.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "view": {
+          "type": "STRING",
+          "description": "Required target storefront view state: 'account_diagnostics', 'tailored_bundle_showcase', 'mesh_coverage_map', or 'checkout_and_servicenow'."
+        },
+        "view_mode": {
+          "type": "STRING",
+          "description": "Optional sub-view toggle used by mesh_coverage_map: 'after_mesh_coverage' (default showing Smart Hub 3 + 3 Mesh Discs in Hallway, Kitchen-Diner, and Upstairs Landing), 'before_dead_zones' (showing Smart Hub 2 red dead zones), 'upstairs_gaming_view', or 'hybrid_4g_failover'."
+        },
+        "payload_json": {
+          "type": "STRING",
+          "description": "Optional structured JSON string with view-specific telemetry, 3-pillar bundle details, coverage nodes, or basket and ServiceNow INC-904821 confirmation details."
+        }
+      },
+      "required": [
+        "view"
+      ]
+    },
+    "response": {
+      "type": "OBJECT",
+      "properties": {
+        "status": {
+          "type": "STRING",
+          "description": "Confirmation that the main Cymbal Telecom web storefront UI updated to the requested view."
+        },
+        "active_view": {
+          "type": "STRING",
+          "description": "The storefront view now displayed to the customer."
+        }
+      },
+      "required": [
+        "status"
+      ]
+    }
+  }
+}
